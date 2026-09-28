@@ -1,0 +1,393 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- employer side ----------
+
+model Organization {
+  id           String          @id @default(cuid())
+  name         String
+  website      String?
+  industry     String?
+  description  String?
+  contactEmail String?
+  contactPhone String?
+  createdAt    DateTime        @default(now())
+  users        User[]
+  positions    Position[]
+  invites      PendingInvite[]
+  apiKey       OrgApiKey?
+  apiUsage     ApiUsageEvent[]
+  auditLog     AuditLogEntry[]
+}
+
+enum OrgRole {
+  OWNER
+  ADMIN
+  RECRUITER
+  VIEWER
+}
+
+model User {
+  id                  String               @id @default(cuid())
+  email               String               @unique
+  name                String
+  phone               String?
+  passwordHash        String
+  orgRole             OrgRole              @default(RECRUITER)
+  organization        Organization         @relation(fields: [organizationId], references: [id])
+  organizationId      String
+  createdAt           DateTime             @default(now())
+  positionTeams       PositionTeam[]
+  notificationPrefs   NotificationPrefs?
+  notificationReads   NotificationRead[]
+  notes               CandidateNote[]
+  passwordResetTokens PasswordResetToken[]
+}
+
+// §3.8/3.9: the org roster is the source of truth for who exists in the org
+// (decision documented in the integration checklist response — position
+// teams, below, assign *existing* org members rather than creating new
+// ad-hoc people per position). An invite is pending until the invitee sets
+// a password via the emailed link; on acceptance it becomes a real User.
+model PendingInvite {
+  id              String       @id @default(cuid())
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId  String
+  email           String
+  name            String
+  role            OrgRole
+  tokenHash       String       @unique // sha256 of the token — only the emailed link carries the raw value
+  invitedByUserId String
+  createdAt       DateTime     @default(now())
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+
+  @@unique([organizationId, email])
+}
+
+// ---------- positions ----------
+
+enum PositionStatus {
+  OPEN
+  PAUSED
+  CLOSED
+}
+
+model Position {
+  id               String         @id @default(cuid())
+  organization     Organization   @relation(fields: [organizationId], references: [id])
+  organizationId   String
+  title            String
+  location         String
+  employmentType   EmploymentType @default(FULL_TIME)
+  status           PositionStatus @default(OPEN)
+  description      String
+  // The posting's deadline, shown to the hiring team — does NOT gate whether
+  // candidates can still apply (apply.html never checks it; only `status`
+  // controls that). Required for every new/edited position (enforced in
+  // lib/api/validation.ts and the PATCH route); nullable only so positions
+  // created before that rule still load — they get one the next time they're edited.
+  endDate          DateTime?
+  // Optional details from the New position form. Free text: either one of the
+  // form's preset options (e.g. "60k – 90k", "Bachelor's degree") or the
+  // person's own entry. null = not specified (the form's "None").
+  salary           String?
+  gender           String?
+  vacancies        String?
+  education        String?
+  experience       String?
+  // e.g. [{ "label": "Python", "type": "skill" }, { "label": "5+ yrs", "type": "experience" }]
+  requirementChips Json
+  createdAt        DateTime       @default(now())
+
+  applications Application[]
+  team         PositionTeam[]
+
+  @@index([organizationId, status])
+}
+
+// join table: which org members are assigned to which position, with a
+// per-position role that can override the user's default org role
+// (e.g. a Viewer on one position, Admin on another)
+model PositionTeam {
+  id         String   @id @default(cuid())
+  position   Position @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  positionId String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  role       OrgRole
+  addedAt    DateTime @default(now())
+
+  @@unique([positionId, userId])
+}
+
+// ---------- applications (job finders — no account) ----------
+
+enum ApplicationStatus {
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum ContactMethod {
+  EMAIL
+  PHONE
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  HYBRID
+}
+
+// The upstream provider an org's BYOK key belongs to — see LLM_PROVIDERS in lib/domain-enums.ts for why Meta
+// isn't here yet. One key routes to exactly one provider; this is what makes it real BYOK rather than a broker
+// model like the OpenRouter integration this replaces.
+enum LlmProvider {
+  ANTHROPIC
+  OPENAI
+  GEMINI
+  MISTRAL
+  XAI
+}
+
+model Application {
+  id         String   @id @default(cuid())
+  position   Position @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  positionId String
+
+  // raw submission
+  fullName        String
+  contactMethod   ContactMethod
+  email           String?
+  phone           String?
+  resumeUrl       String
+  coverLetterText String? // typed directly in the apply form — not an uploaded file
+  githubUrl       String
+  personalSiteUrl String?
+  source          String? // e.g. "linkedin", "careers_page", "referral" — from the ?src= param on the apply link
+
+  status        ApplicationStatus @default(PROCESSING)
+  failureReason String?
+  createdAt     DateTime          @default(now())
+  analyzedAt    DateTime?
+
+  resumeExtract  ResumeExtract?
+  githubAnalysis GithubAnalysis?
+  score          Score?
+  notes          CandidateNote[]
+
+  notificationReads NotificationRead[]
+
+  @@unique([positionId, email])
+  @@index([positionId, status])
+}
+
+// structured resume/cover-letter extraction (via LLM)
+model ResumeExtract {
+  id            String      @id @default(cuid())
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  applicationId String      @unique
+
+  // { school, field, gpa, gradYear } — any sub-field may be null when the
+  // resume doesn't state it (most resumes omit GPA, for instance)
+  education       Json?
+  yearsExperience Float
+  topSkills       Json // string[]
+
+  // [{ title, company, startDate, endDate, stack: string[], achievements: string[] }]
+  // startDate/endDate are free-text as extracted (e.g. "Jan 2020"), not a
+  // strict YYYY-MM format — the UI displays them verbatim, no date parsing
+  experience Json
+
+  createdAt DateTime @default(now())
+}
+
+// structured GitHub analysis (via GitHub GraphQL API)
+model GithubAnalysis {
+  id            String      @id @default(cuid())
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  applicationId String      @unique
+
+  username        String?
+  followers       Int     @default(0)
+  totalStars      Int     @default(0) // sum of stars across all repos
+  accountAgeYears Float   @default(0) // years since the GitHub account was created
+  repoCount       Int
+  commitsPastYear Int
+  activeWeeks     Int
+  testRatio       Float? // estimated, 0–1
+
+  // [{ name, lang, pct }]
+  languages Json
+
+  // [{ name, url, lang, original, complexity, testCoverage, stars, commits, lastActiveAt }]
+  repos Json
+
+  // detected tooling booleans, e.g. { "Docker": true, "Kubernetes": true, "CI/CD": true }
+  tooling Json
+
+  // [{ name, url }]
+  shippedProjects Json
+
+  externalContributions Int  @default(0) // PRs/commits to repos the candidate doesn't own
+  // [{ repo, stars, desc }] — merges into notable (high-star) external repos
+  notableMerges         Json
+
+  createdAt DateTime @default(now())
+}
+
+// computed ranking scores + evidence, recomputed whenever the position's
+// applicant pool changes materially (percentiles are pool-relative)
+model Score {
+  id            String      @id @default(cuid())
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  applicationId String      @unique
+
+  meetsRequirements Boolean // gate result — still a hard pass/fail, independent of reqMatch below
+  matchPct          Float // 0–100, overall weighted score (equal-weighted avg of the 4 below)
+  reqMatch          Float // 0–100, graded % of requirement chips satisfied (skills + experience-years + location)
+  consistency       Float // 0–100
+  collaboration     Float // 0–100
+  codeQuality       Float // 0–100, repo complexity + test coverage (relevance-to-requirements lives in reqMatch instead)
+
+  // [{ requirement, met, evidence }]
+  evidenceMatrix Json
+
+  computedAt DateTime @default(now())
+}
+
+// ---------- candidate notes (§3.23) ----------
+
+model CandidateNote {
+  id            String      @id @default(cuid())
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  applicationId String
+  // nullable + SetNull: if the author later leaves the org (§3.8 team
+  // removal), the note itself should survive as part of the candidate's
+  // record — only the author link is cleared. authorName is snapshotted
+  // at write time so "left the company" doesn't turn into an anonymous
+  // note with no indication of who originally wrote it.
+  author        User?       @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  authorId      String?
+  authorName    String
+  // snapshotted at write time, like authorName — a note should keep
+  // showing "Recruiter" even if that person is later promoted to Admin,
+  // since it reflects who they were when they wrote it
+  authorRole    OrgRole
+  text          String
+  createdAt     DateTime    @default(now())
+  editedAt      DateTime?
+
+  @@index([applicationId])
+}
+
+// ---------- org-level settings (§3.27–3.32) ----------
+
+model NotificationPrefs {
+  id           String  @id @default(cuid())
+  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String  @unique
+  newApplicant Boolean @default(true)
+  qualified    Boolean @default(true)
+  teamActivity Boolean @default(true)
+  emailDigest  Boolean @default(false)
+}
+
+// read-state is per (user, application) — "activity" in the frontend today
+// is exactly "an application arrived/was updated", so the application IS
+// the activity record; see app/api/notifications/*/route.ts for the path
+// to first-class activity records if more types are ever needed.
+model NotificationRead {
+  id            String      @id @default(cuid())
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  applicationId String
+  readAt        DateTime    @default(now())
+
+  @@unique([userId, applicationId])
+}
+
+// §3.32: the org's own OpenRouter key, used for the resume-extraction LLM
+// call in the analysis pipeline (see lib/extraction/resume-extract.ts).
+// `encryptedKey` is AES-256-GCM ciphertext (iv + authTag + ciphertext,
+// base64, see lib/security/encryption.ts) under a server-held key from
+// ENCRYPTION_KEY — the plaintext key is NEVER stored and, after the initial
+// save, never returned to any client again. `last4` is stored in plaintext
+// purely to render a masked display (sk-or-v1-••••••••1234) without ever
+// decrypting the real key for that purpose.
+model OrgApiKey {
+  id              String       @id @default(cuid())
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId  String       @unique
+  // Which upstream provider this key belongs to — required, no default: unlike the old single-broker
+  // OpenRouter setup, a provider-scoped BYOK key has no sensible default provider to fall back to. The org
+  // picks one explicitly in Settings > API Keys, before or alongside pasting the key itself.
+  // Migration note: existing rows (all currently the old free-text "openrouter" value from before this
+  // change) have no correct mapping to one of these — since OpenRouter itself could route to any of them,
+  // there's no way to infer which single provider the org "really" meant. Existing keys will need to be
+  // re-entered once this ships; there's no automatic backfill for this column.
+  provider        LlmProvider
+  encryptedKey    String
+  last4           String
+  model           String
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  createdByUserId String
+}
+
+// one row per analysis job's LLM call, so usage can be rolled up per org
+// per billing period without needing a separate billing-events pipeline
+model ApiUsageEvent {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  applicationId  String
+  model          String
+  tokensIn       Int
+  tokensOut      Int
+  costUsd        Float? // populated when the provider reports cost; null otherwise
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, createdAt])
+}
+
+// Who did what, when — not a full event-sourcing log, just enough to
+// answer "who added/replaced/removed the org's API key" and similar
+// accountability questions for sensitive actions. Never stores the
+// sensitive value itself (e.g. logs "API key replaced", not the key).
+model AuditLogEntry {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  actorUserId    String
+  action         String // e.g. "api_key.created", "api_key.removed", "team.member_removed"
+  targetType     String? // e.g. "OrgApiKey", "User"
+  targetId       String?
+  metadata       Json? // non-sensitive context only — never secrets
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, createdAt])
+}
+
+// §3.4 — forgot password. Tokens are single-use, short-lived, and
+// invalidated on use or superseded by a newer request for the same user.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  tokenHash String    @unique // sha256 of the token — only the emailed link carries the raw value
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
