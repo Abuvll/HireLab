@@ -52,20 +52,20 @@
   a{color:inherit;}
   @media (prefers-reduced-motion: reduce){ *{animation:none!important;transition:none!important;} }
 
-  .app{display:flex;min-height:100vh;padding:20px;gap:20px;align-items:flex-start;}
+  .app{display:flex;min-height:100vh;padding: 20px 20px 0px 20px;gap:20px;align-items:flex-start;}
 
   /* ---------- sidebar (expandable) ---------- */
   .sidebar{
-    width:248px;flex-shrink:0;position:sticky;top:0;height:100vh;margin:-20px 0 0 -20px;
+    width:235px;flex-shrink:0;position:sticky;top:0;height:100vh;margin:-20px 0 0 -20px;
     display:flex;flex-direction:column;align-items:stretch;padding:14px 12px;
     background:var(--surface);border:0;border-right:1px solid var(--border-light);border-radius:0;box-shadow:none;
     transition:width .28s cubic-bezier(.4,0,.2,1);
   }
   .sidebar.collapsed{width:88px;}
   .rail-brand{display:flex;align-items:center;height:40px;margin-bottom:18px;flex-shrink:0;}
-  .rail-brand-mark{width:30px;height:30px;border-radius:10px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-  .rail-brand img{width:18px;height:18px;object-fit:contain;}
-  .rail-brand-name{margin-left:10px;max-width:76px;font-family:var(--serif-display);font-size:19px;font-weight:600;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;opacity:1;transition:opacity .2s ease .08s,max-width .28s cubic-bezier(.4,0,.2,1),margin-left .28s cubic-bezier(.4,0,.2,1);}
+  .rail-brand-mark{display: flex;align-items: center;justify-content: center;flex-shrink: 0;margin-left: 10px;}
+  .rail-brand img{width:27px;height:27px;object-fit:contain;}
+  .rail-brand-name{margin-left:6px;max-width:76px;font-family:var(--serif-display);font-size:19px;font-weight:600;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;opacity:1;transition:opacity .2s ease .08s,max-width .28s cubic-bezier(.4,0,.2,1),margin-left .28s cubic-bezier(.4,0,.2,1);}
   .rail-brand-toggle{width:30px;height:30px;margin-left:auto;border-radius:10px;background:none;border:none;color:var(--text);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s ease;}
   .rail-brand-toggle i{font-size:20px;line-height:1;}
   .rail-brand-toggle:hover{background:var(--accent-soft);}
@@ -92,11 +92,6 @@
   .rail-tip{position:fixed;transform:translateY(-50%) translateX(-4px);background:var(--text);color:var(--on-ink);font-size:12px;font-weight:600;padding:6px 11px;border-radius:8px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .15s ease,transform .15s ease;z-index:200;}
   .rail-tip.show{opacity:1;transform:translateY(-50%) translateX(0);}
 
-  /* ================================================================
-     AUTH — Login / Signup (shown in place of the app when logged out)
-     Design extracted from loginsignup.html; reuses this app's existing
-     surface/border/text tokens so it matches the rest of the product.
-  ================================================================ */
   .loggedout-wrap{
     min-height:100vh; width:100%; display:flex; align-items:center; justify-content:center; padding:32px;
     background:
@@ -184,10 +179,10 @@
   }
 
   /* ---------- main ---------- */
-  .main{flex:1;display:flex;flex-direction:column;min-width:0;gap:16px;}
+  .main{flex:1;display:flex;flex-direction:column;min-width:0;gap:16px;padding: 0 0 16px;}
   .topbar{min-height:52px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:6px 4px 0;}
   .topbar-actions{display:flex;align-items:center;flex-shrink:0;}
-  .breadcrumb{display:flex;align-items:baseline;gap:10px;font-size:18px;font-weight:500;color:var(--text-faint);flex-wrap:wrap;}
+  .breadcrumb{display:flex;align-items:baseline;gap:10px;font-size:18px;font-weight:500;color:var(--text-faint);flex-wrap:wrap;align-items: center;}
   .breadcrumb .crumb-link, .breadcrumb .crumb-muted{color:var(--text-faint);cursor:pointer;background:none;border:none;font-size:inherit;font-weight:inherit;letter-spacing:inherit;padding:0;font-family:inherit;}
   .breadcrumb .crumb-muted{cursor:default;}
   .breadcrumb .crumb-link:hover{color:var(--text-muted);}
@@ -259,10 +254,10 @@
 
   /* ---------- toasts ---------- */
   /* ---------- offline banner ---------- */
-  .offline-banner{display:none;position:fixed;top:calc(env(safe-area-inset-top, 0px) + 14px);left:0;right:0;margin:0 auto;width:fit-content;max-width:calc(100vw - 28px);z-index:150;align-items:center;gap:10px;background:var(--surface);color:var(--text);border:1px solid var(--amber-border);border-radius:18px;box-shadow:var(--shadow-lift);padding:9px 16px 9px 10px;font-size:13px;font-weight:500;line-height:1.35;pointer-events:none;}
+  .offline-banner{display:none;position:fixed;top:calc(env(safe-area-inset-top, 0px) + 14px);left:0;right:0;margin:0 auto;width:fit-content;max-width:calc(100vw - 28px);z-index:150;align-items:center;gap:10px;background:var(--surface);color:var(--text);border-radius:18px;box-shadow:var(--shadow-lift);padding:9px 16px 9px 10px;font-size:13px;font-weight:500;line-height:1.35;pointer-events:none;}
   .offline-banner.show{display:flex;animation:offlineIn .28s cubic-bezier(.16,.8,.3,1) both;}
   .offline-banner strong{font-weight:700;}
-  .offline-icon{width:28px;height:28px;border-radius:999px;background:var(--amber-bg);color:var(--amber);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px;}
+  .offline-icon{width:28px;height:28px;border-radius:999px;background:var(--amber-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px;}
   @keyframes offlineIn{from{opacity:0;transform:translateY(-10px);}to{opacity:1;transform:none;}}
 
   .toast-stack{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:200;display:flex;flex-direction:column-reverse;gap:8px;align-items:center;pointer-events:none;}
@@ -294,16 +289,6 @@
   .ring-chip.warn{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border);}
   .ring-chip svg{width:10px;height:10px;}
 
-  /* ================================================================
-     OVERVIEW — bento dashboard
-     Purpose-built for the employer's first glance: what needs action
-     right now, who the strongest candidate is, how the org-wide
-     funnel is moving, and whether any role has gone quiet. Reuses
-     existing tokens (surface/border/shadow/mono/serif), the match-ring
-     and funnel-row components verbatim, and the same four accent
-     tints already used for position-card corner blooms so the page
-     reads as one system rather than a bolted-on dashboard.
-  ================================================================ */
   .ov-accent-blue{ --ov-accent:#B7CBE8; }
   .ov-accent-clay{ --ov-accent:#E7BFA8; }
   .ov-accent-sage{ --ov-accent:#C3D6BB; }
@@ -822,7 +807,7 @@
   /* ---------- help ---------- */
   .help-section-card{max-width:720px;margin:0 0 20px;}
   .help-search-body{padding:14px 20px;}
-  .help-search-body .m-search-box{max-width:420px;}
+  .help-search-body .m-search-box{max-width:420px; margin-bottom: 15px;}
   .help-search-box-lg{
     display:flex;align-items:center;gap:10px;max-width:420px;
     background:var(--surface);border:1px solid var(--border);border-radius:999px;
@@ -889,7 +874,7 @@
   .help-topic-card-chevron{color:var(--text-faint);transition:transform .2s ease;display:flex;}
   .help-topic-card-chevron svg{width:13px;height:13px;}
   .help-topic-card.active .help-topic-card-chevron{transform:rotate(180deg);}
-  .help-topic-detail{margin:0 18px 18px;padding:16px;border-radius:14px;background:var(--surface-sunken);border-top:3px solid var(--text);animation:fadeUp .25s cubic-bezier(.16,.8,.3,1) both;}
+  .help-topic-detail{margin:0 18px 18px;padding:16px;border-radius:14px;background:var(--surface-sunken);animation:fadeUp .25s cubic-bezier(.16,.8,.3,1) both;}
   .help-topic-detail-title{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:700;color:var(--text);margin-bottom:10px;}
   .help-topic-detail-title svg{width:17px;height:17px;color:var(--text-muted);}
   .help-topic-detail-body{font-size:13px;color:var(--text-muted);line-height:1.6;}
@@ -947,15 +932,6 @@
   .api-key-masked{font-family:var(--mono);font-size:13.5px;font-weight:700;}
   .api-key-model{font-size:12px;color:var(--text-muted);margin-top:2px;}
 
-  /* ================================================================
-     OVERVIEW — bento redesign (ov2- namespace)
-     Three independent vertical columns on desktop, matching the
-     reference layout exactly. On mobile the same card markup is
-     re-rendered once more (see renderOverviewView) in the required
-     stat-tiles -> best-match -> efficiency -> (rest) order and shown
-     via the existing m-only/m-flex mobile toggle, while .ov2-desktop
-     is hidden below the mobile breakpoint.
-  ================================================================ */
   .ov2-desktop{ margin-bottom: 0; }
   .ov2-grid{ display:grid; grid-template-columns:1.1fr 1fr; gap:20px; align-items:start; }
   .ov2-col{ display:flex; flex-direction:column; gap:20px; min-width:0; }
@@ -1037,20 +1013,9 @@
     .stats-grid, .positions-grid, .gh-stats, .ov-tiles{grid-template-columns:1fr 1fr;}
   }
 
-  /* ================================================================
-     MOBILE EXPERIENCE
-     3 bottom tabs — Overview / Posting / Settings — replace the
-     desktop rail + breadcrumb below the mobile breakpoint. Everything
-     in this block is inert (display:none) above the breakpoint so the
-     desktop app is untouched.
-  ================================================================ */
+
   :root{
     --mobile-bp: 860px;
-    /* Fluid tokens: scale smoothly across the whole phone range (340px small
-       phones -> 860px large phones/phablets) instead of jumping between a
-       handful of fixed breakpoints. Every mobile rule below that previously
-       hardcoded a size now pulls from one of these, so small phones get a
-       usable floor and large phones get real growth instead of empty margin. */
     --m-pad: clamp(14px, 6.154px + 2.308vw, 26px);        /* content side padding */
     --m-gap: clamp(10px, 4.769px + 1.538vw, 18px);        /* section-to-section gap */
     --m-card-pad: clamp(14px, 10.08px + 1.154vw, 20px);   /* card-body padding */
@@ -1075,7 +1040,7 @@
   }
 
   .m-only{ display:none; }
-  .d-only{ display:initial; }
+  /* .d-only{ display:initial; } */
   .side-stat-value{ font-size:22px; font-weight:700; letter-spacing:-0.02em; font-family:var(--mono); }
   .side-card-btn{ display:block; width:100%; text-align:left; }
   .btn-view-candidate{
@@ -1280,8 +1245,6 @@
     .m-status-chip.active{ background:var(--accent); border-color:var(--accent); color:var(--on-accent); }
     .m-results-count{ font-size:12px; color:var(--text-faint); margin:0 2px 8px; }
 
-    /* ---------- posting cards now share one editorial skin (see base
-       CSS above) on every viewport; only the grid stacks to 1 column here. */
     .positions-grid{ display:flex; flex-direction:column; gap:16px; }
 
     /* ---------- filter bottom sheet (pop-out) ---------- */
@@ -1353,12 +1316,7 @@
     .filter-panel{ width:min(320px, calc(100vw - 64px)); }
     .topn-panel{ width:min(200px, calc(100vw - 64px)); }
 
-    /* ---------- candidate list rows ----------
-       Desktop rows are a rigid multi-column flex line (name/skills/composite
-       bar/standout text all at fixed widths) that overflows badly under
-       ~660px. On mobile we reflow to two lines: identity + match on top,
-       skills and the composite bar wrapped below; the rarely-critical
-       standout text and chevron (the row is already fully clickable) drop. */
+    /* ---------- candidate list rows ---------- */
     .candidate-row{ flex-wrap:wrap; padding:12px 14px; gap:6px 8px; align-items:center; }
     .rank-num{ width:16px; font-size:13px; order:1; }
     .candidate-row .avatar{ width:var(--avatar-sm); height:var(--avatar-sm); font-size:var(--avatar-sm-fs); order:2; }
@@ -1394,11 +1352,7 @@
     .card-header{ flex-wrap:wrap; row-gap:4px; }
     .card-header a.card-badge{ flex-basis:100%; }
 
-    /* ---------- candidate detail: requirements vs evidence ----------
-       Keeps the real REQUIREMENT / EVIDENCE table (matching desktop) instead of
-       stacking rows into an unlabeled list. It scrolls horizontally only as a
-       fallback if it doesn't fit — same contained-scroller mechanism as
-       .repo-table-scroll — rather than reflowing the layout. */
+    /* ---------- candidate detail: requirements vs evidence ---------- */
     .evidence-table-scroll{
       overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch;
       overscroll-behavior-x:contain; touch-action:pan-x;
@@ -1441,15 +1395,7 @@
     .shipped-name{ font-size:12.5px; }
     .shipped-url{ font-size:10.5px; flex-basis:100%; word-break:break-all; }
 
-    /* ---------- candidate detail: per-repo table -> horizontal scroll ----------
-       Repo + Origin fill the initial view; swiping horizontally reveals
-       Stars / Commits / Complexity. The table itself scrolls inside a
-       contained scroller (.repo-table-scroll) so rows stay perfectly
-       aligned and the page never moves horizontally. */
-    /* .detail-col is a grid item; without min-width:0 its implicit auto-min
-       size is content-based, so the fixed-width scrollable table inside
-       .card-repo would inflate the whole column instead of scrolling
-       internally. This has no visual effect when content already fits. */
+    /* ---------- candidate detail: per-repo table -> horizontal scroll ----------*/
     .detail-col{ min-width:0; }
     .card-repo{ min-width:0; }
     .repo-swipe-hint{ font-size:12.5px; color:var(--text-faint); margin:0 0 14px; }
@@ -1497,12 +1443,7 @@
     .settings-shell{ display:none; } /* replaced on mobile by .m-settings-menu / the single open section, above */
     .settings-panel{ padding:14px 14px; }
 
-    /* ---------- compact form density on mobile ----------
-       Desktop form spacing (24px section margins, 16px field gaps, 130px
-       textareas) is too tall for shorter phone viewports and pushes fields /
-       the save button off-screen. Tighten the vertical rhythm so longer forms
-       (Organization, Personal) actually fit the visible screen instead of
-       requiring a full extra scroll to reach the bottom. */
+    /* ---------- compact form density on mobile ----------*/
     .settings-section-title{ margin-bottom:2px; }
     .settings-section-sub{ margin-bottom:10px; }
     .settings-search{ max-width:none; margin-bottom:12px; }
@@ -1533,18 +1474,13 @@
      LARGE PHONE ENHANCEMENT
      From ~600px (large phones, phablets, unfolded foldables) up to the
      860px desktop handoff, the mobile chrome stays exactly the same
-     design — same tab bar, same cards, same type — but there's enough
+     design — same tab bar, same cards, same type but there's enough
      width to show more at once instead of just widening the margins.
      Every rule here re-arranges existing markup into more columns; it
      never introduces new components or a different visual language.
   ================================================================ */
   @media (min-width: 600px) and (max-width: 860px){
-    /* four stat tiles in one row instead of a 2x2 block */
     .m-stat-grid{ grid-template-columns:repeat(4, 1fr); }
-
-    /* bring back the desktop-style side column (quality signal + team)
-       next to the top-candidate ring, instead of the stacked mobile
-       tile duplicate below it — same info, better use of the width */
     .pos-lower-grid{ display:grid; grid-template-columns:1.4fr 1fr; gap:var(--m-gap); align-items:stretch; }
     .match-ring-card{ height:100%; }
     .d-qt-col{ display:flex; flex-direction:column; gap:var(--m-gap); }
@@ -1553,20 +1489,14 @@
     /* job posting cards side by side */
     .positions-grid{ display:grid; grid-template-columns:1fr 1fr; }
 
-    /* search bar shares a line with Top-N / Filters instead of forcing
-       its own row underneath */
     .search-wrap{ flex-basis:auto; flex:1 1 200px; }
 
-    /* candidate rows: skills + composite score sit side by side on
-       their own line instead of each stacking full-width */
     .skills-block{ flex-basis:auto; width:auto; flex:1 1 220px; }
     .comp-block{ flex-basis:auto; width:180px; }
 
     /* GitHub summary back to a single row of four */
     .gh-stats{ grid-template-columns:repeat(4, 1fr); }
 
-    /* overview bento: hero+spotlight and insight+attention side by side,
-       four stat tiles in one row — same cards, better use of the width */
     .ov-hero-row, .ov-secondary-row{ grid-template-columns:1.4fr 1fr; }
     .ov-tiles{ grid-template-columns:repeat(4, 1fr); }
   }
@@ -1702,9 +1632,7 @@
   .appearance-swatch.selected{ border-color:var(--focus-ring); box-shadow:0 0 0 1px var(--focus-ring); }
   .appearance-swatch::after{ content:""; position:absolute; inset:9px; border-radius:6px; background:var(--sw); }
 
-  /* ================= Accent colors (Settings -> Appearance) =================
-     Default "Ink" = today's look (tokens in :root). Each preset has tuned light + dark values:
-     text on fills >= 4.5:1, accent text >= 4.5:1, rings/fills >= 3:1. ================= */
+  /* ================= Accent colors (Settings -> Appearance) =================*/
   :root[data-accent="blue"]{ --accent:#2D5BFF; --on-accent:#FFFFFF; --accent-hover:#2852E6; --accent-text:#2D5BFF; --focus-ring:#2D5BFF; --accent-soft:color-mix(in srgb, var(--accent) 14%, var(--surface)); --accent-deep:#2142B8; --accent-grad-a:#7694FF; --accent-grad-b:#2D5BFF; --accent-highlight:var(--accent-soft); --hero-glow:color-mix(in srgb, var(--accent-grad-a) 40%, transparent); --ink-surface:var(--accent-deep); }
   :root[data-theme="dark"][data-accent="blue"]{ --accent:#7592FF; --on-accent:#1C1C1C; --accent-hover:#88A1FF; --accent-text:#7592FF; --focus-ring:#7592FF; --accent-soft:color-mix(in srgb, var(--accent) 22%, var(--surface)); --accent-deep:#2142B8; --accent-grad-a:#7592FF; --accent-grad-b:#5B72C7; --accent-highlight:var(--accent-soft); --hero-glow:color-mix(in srgb, var(--accent-grad-a) 40%, transparent); --ink-surface:var(--accent-deep); }
   :root[data-accent="lime"]{ --accent:#7DA000; --on-accent:#17171A; --accent-hover:#709000; --accent-text:#607800; --focus-ring:#607800; --accent-soft:color-mix(in srgb, var(--accent) 14%, var(--surface)); --accent-deep:#445700; --accent-grad-a:#AAC159; --accent-grad-b:#7DA000; --accent-highlight:var(--accent-soft); --hero-glow:color-mix(in srgb, var(--accent-grad-a) 40%, transparent); --ink-surface:var(--accent-deep); }
@@ -2285,11 +2213,6 @@
   }
   const ROLE_FROM_LABEL = { "Owner": "OWNER", "Admin": "ADMIN", "Recruiter": "RECRUITER", "Viewer": "VIEWER" };
   function roleLabel(r){ return ROLE_LABELS[r] || r; }
-  // ---- role enforcement -------------------------------------------------
-  // Owners and Admins can manage postings, status, and notes; Recruiters can
-  // add notes but not edit postings; Viewers are read-only everywhere.
-  // The role is whatever the backend says (GET /api/me) — there is no way to pick one in the UI — and an unknown
-  // role gets nothing. This only decides what to SHOW; every route re-checks the caller's role on the server.
   function canManagePosition(){ return state.currentUserRole === "OWNER" || state.currentUserRole === "ADMIN"; }
   function canWriteNotes(){ return state.currentUserRole === "OWNER" || state.currentUserRole === "ADMIN" || state.currentUserRole === "RECRUITER"; }
   function rolePlural(){ return ROLE_LABELS[state.currentUserRole] ? `${ROLE_LABELS[state.currentUserRole]}s` : "Members"; }
@@ -2338,9 +2261,6 @@
     return `${d} days ago`;
   }
 
-  // A requirement chip from the API is normally {label, type}, but tolerate a bare string too — belt and
-  // suspenders against any not-yet-normalized data, so a malformed entry never means a requirement silently
-  // disappears from the Postings cards or the Position Details page.
   function chipLabel(c){ return typeof c === "string" ? c : (c && c.label) || ""; }
 
   function adaptPositionSummary(p){
@@ -2447,10 +2367,6 @@
   // Global state
   // ============================================================
   let POSITIONS = [];
-  // Postings must always read Open, then Paused, then Closed/Ended, newest first within each group. The server
-  // already returns positions newest-first (orderBy createdAt desc); Array.prototype.sort is stable (guaranteed
-  // since ES2019), so sorting on status rank alone preserves that relative order within each group without
-  // needing a raw timestamp on the client.
   const POSITION_STATUS_RANK = { OPEN: 0, PAUSED: 1, CLOSED: 2 };
   function sortPositionsForDisplay(list){
     return [...list].sort((a, b) => (POSITION_STATUS_RANK[a.status] ?? 99) - (POSITION_STATUS_RANK[b.status] ?? 99));
@@ -2509,8 +2425,6 @@
     orgProfile: { website: "", industry: "", description: "", contactEmail: "", contactPhone: "" },
     personal: { name: "Jordan Alvarez", email: "jordan@acme.com", phone: "" },
     passwordSaved: false,
-    // From GET /api/me (the backend's record of this person) — never chosen client-side. Unknown until it loads,
-    // and an unknown role is granted nothing (see canManagePosition / canWriteNotes).
     currentUserRole: null,
     currentUserId: null,
     userLoaded: false, // the app shows its loading state until GET /api/me has answered
@@ -2671,10 +2585,6 @@
     const newLastWeek = weeklyBuckets[1];
     const weeklyTrend = [...weeklyBuckets].reverse(); // oldest (-5w) -> newest (Now), for the chart
 
-    // "What HireLab handled for you" this month: every application gets
-    // automatically screened (resume + GitHub cross-check), and each one
-    // saves roughly the manual review time a recruiter would otherwise
-    // spend on a first pass (~45 minutes).
     const screenedCount = totalApplicants;
     const hoursSaved = Math.round((totalApplicants * 45) / 60);
 
@@ -3843,7 +3753,7 @@
           <span class="org-reminder-icon"><i class="ph ph-buildings"></i></span>
           <span class="org-reminder-text">
             <div class="org-reminder-title">Update your organization details</div>
-            <div class="org-reminder-desc">Give applicants a better introduction — your organization's name, description and details appear on every position's apply page.</div>
+            <div class="org-reminder-desc">Give applicants a better introduction; your organization's name, description and details appear on every position's apply page.</div>
           </span>
           <button type="button" class="org-reminder-btn" id="org-reminder-btn">Update profile</button>
         </div>
@@ -3906,7 +3816,7 @@
           </div>
           <div class="side-card">
             <h4>Good to know</h4>
-            <p class="side-note">${isEdit ? "Changes apply immediately and are visible to your team right away." : "Once published, you'll get a shareable apply link. Candidates need <b>no account</b> to apply — just the link."}</p>
+            <p class="side-note">${isEdit ? "Changes apply immediately and are visible to your team right away." : "Once published, you'll get a shareable apply link. \n Candidates need <b>no account</b> to apply - just the link."}</p>
           </div>
         </div>
       </div>`;
@@ -3925,7 +3835,7 @@
       <div class="link-share-wrap anim-in">
         <div class="link-share-icon">${ICON.checkCircle}</div>
         <h2>Position published</h2>
-        <p><b>${escapeHtml(p?.title || "Your position")}</b> is live and ready to accept applications. Share the link below with candidates — no login required on their end.</p>
+        <p><b>${escapeHtml(p?.title || "Your position")}</b> is live and ready to accept applications. Share the link below with candidates - no login required on their end.</p>
 
         ${p ? `
           <div class="card link-share-summary">
@@ -4143,7 +4053,7 @@
       <div class="cand-empty">
         <div class="cand-empty-icon">${ICON.users}</div>
         <h4>No applicants yet</h4>
-        <p>Share this posting's apply link to start receiving candidates — they'll show up here, ranked and scored automatically.</p>
+        <p>Share this posting's apply link to start receiving candidates - they'll show up here, ranked and scored automatically.</p>
         <button class="btn-outline-dash" id="cand-empty-copy-link">${ICON.copy} Copy apply link</button>
       </div>`;
   }
@@ -4288,7 +4198,7 @@
             </div>
           ` : `<div class="note-readonly-hint">Viewers can read notes but can't add or edit them.</div>`}
           <div class="note-list" id="note-list">
-            ${ordered.length ? ordered.map((n) => renderNoteCard(n)).join("") : `<div class="note-empty">No notes yet${canWriteNotes() ? " — be the first to add one." : "."}</div>`}
+            ${ordered.length ? ordered.map((n) => renderNoteCard(n)).join("") : `<div class="note-empty">No notes yet${canWriteNotes() ? " - be the first to add one." : "."}</div>`}
           </div>
         </div>
       </div>
@@ -4323,7 +4233,7 @@
 
       <div class="m-desktop-hint m-only">
         <i class="ph ph-desktop"></i>
-        <span>This page is easiest to review in full on a desktop — tables and score breakdowns have more room to breathe there.</span>
+        <span>This page is easiest to review in full on a desktop.</span>
       </div>
 
       <div class="detail-grid">
@@ -4486,9 +4396,7 @@
   // ============================================================
   // Settings (org-level, admin-facing)
   // ============================================================
-  // Mobile root menu row: a big tappable card with icon + label + chevron,
-  // used for the mobile "Settings" landing screen.
-  // Settings search index: one entry per section (label, short description, and the settings inside it)
+
   const SETTINGS_INDEX = {
     personal: { label: "Personal", desc: "Your name and contact details", items: ["Full name", "Email", "Phone", "Change password", "Current password", "New password"] },
     organization: { label: "Organization", desc: "Company details shown on postings", items: ["Organization name", "Website", "Industry", "Contact email", "Contact phone", "Company description"] },
@@ -4663,15 +4571,6 @@
     `;
   }
 
-  // Every model string is already provider-prefixed the way LiteLLM routes requests (see
-  // lib/extraction/litellm-client.ts) — "provider" here is the same enum the backend stores
-  // (lib/domain-enums.ts LLM_PROVIDERS), not just a display grouping. A BYOK key only works for the ONE
-  // provider it belongs to (real BYOK, unlike the old OpenRouter broker model), so the API key form scopes
-  // the model list to whichever provider is selected — see renderSettingsApiKeys.
-  //
-  // Meta isn't offered: unlike the other five, Meta has no first-party inference API to hold a direct BYOK key
-  // for — Llama models are only reachable through a specific third-party host (Together, Groq, Bedrock, ...),
-  // and picking one on the org's behalf isn't a decision the frontend should make silently.
   const API_KEY_MODEL_GROUPS = [
     { provider: "ANTHROPIC", company: "Anthropic", models: [
       ["anthropic/claude-3-5-sonnet-20241022", "Claude 3.5 Sonnet"],
@@ -4739,7 +4638,7 @@
             ${API_KEY_MODEL_GROUPS.map((g) => `<button type="button" class="role-select-option ${state.orgApiKeyProvider === g.provider ? "active" : ""}" data-provider-value="${g.provider}" role="option" aria-selected="${state.orgApiKeyProvider === g.provider ? "true" : "false"}">${escapeHtml(g.company)} ${state.orgApiKeyProvider === g.provider ? ICON.check : ""}</button>`).join("")}
           </div>
         </div>
-        <div class="form-hint">A key only works for the provider it belongs to — pick which one you're pasting a key from.</div>
+        <div class="form-hint">A key only works for the provider it belongs to; pick which one you're pasting a key from.</div>
       </div>
       <div class="form-field" style="max-width:420px;">
         <label for="api-key-input">API key</label>
@@ -5533,7 +5432,7 @@
     if (shareNative) shareNative.addEventListener("click", async () => {
       const url = document.getElementById("share-url").value;
       const p = state.createdPosition;
-      const shareData = { title: p ? `${p.title} — Apply now` : "Apply now", text: p ? `We're hiring for ${p.title}. Apply here:` : "Apply here:", url };
+      const shareData = { title: p ? `${p.title} - Apply now` : "Apply now", text: p ? `We're hiring for ${p.title}. Apply here:` : "Apply here:", url };
       if (navigator.share) {
         try { await navigator.share(shareData); state.helpLinkCopied = true; } catch (err) { /* user cancelled */ }
       } else {

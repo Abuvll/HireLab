@@ -12,11 +12,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/fill/style.css">
 <style>
-  /* =====================================================================
-     Design tokens — mirrored from the employer dashboard so this page
-     follows the same light / dark theme and accent color (hl-theme /
-     hl-accent in localStorage). Phosphor is the only icon source.
-     ===================================================================== */
+ 
   :root{
     --bg:#F4F3F1; --surface:#ffffff; --surface-sunken:#ffffff; --border:#E3E1DE; --border-light:#ECEAE7; --border-strong:#D3D0CB;
     --text:#17171A; --text-muted:#6B6963; --text-faint:#9C9994; --tint:#F1F0EE; --chip-bg:#ffffff;
@@ -164,10 +160,6 @@
   .card-header .card-aside{margin-left:auto;font-size:12.5px;font-weight:600;color:var(--text-muted);font-variant-numeric:tabular-nums;}
   .card-body{padding:var(--card-pad);}
 
-  /* ---------- collapsible cards ----------
-     Same pattern as the dashboard's Help FAQ rows: a full-width row button,
-     a chevron that rotates when open, and the same easing. data-collapse says
-     which layout collapses the card: "mobile" (single column) or "desktop". */
   .ch-toggle-wrap{display:none;}
   .ch-toggle{width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--border-light);color:inherit;cursor:pointer;transition:background .15s ease, border-color .2s ease;}
   @media (hover:hover){ .ch-toggle:hover .chev{color:var(--text);} }
@@ -643,9 +635,6 @@
   paintThemeButton();
   attachRipple(themeBtn);
 
-  // ---------- which posting is this? ----------
-  // Accepts the original "?position=<id>" link and the "/apply/<id>" share link
-  // that the employer dashboard generates.
   function positionIdFromPath(){
     const m = location.pathname.match(/\/apply\/([^/?#]+)\/?$/);
     return m ? decodeURIComponent(m[1]) : null;
@@ -661,44 +650,6 @@
 
   let position = null;
 
-  /* =====================================================================
-     API CONTRACT (same-origin, JSON unless noted). This page never invents
-     data: if a request fails it says so, and nothing is shown or sent
-     except what the API returns.
-
-     GET  /api/apply/:positionId
-          200 -> { "position": { title, location, employmentType, createdAt,
-                    requirementChips: [{ label }], status?, description?, endDate?,
-                    salary?, experience?, education?, vacancies?,
-                    organization?: { name, industry, website, description } } }
-          Every field except title is optional; whatever is missing is simply
-          not shown. Company details may also arrive as orgName / organizationName
-          + orgProfile, matching the dashboard's settings model.
-          404/410 (or another 4xx) -> the posting isn't accepting applications.
-
-     POST /api/apply/:positionId/upload      multipart/form-data, field "file"
-          200 -> { "url": "<opaque string>" }   (sent back as resumeUrl below)
-
-     POST /api/apply/:positionId             application/json
-          { fullName, contactMethod: "EMAIL"|"PHONE", email, phone, resumeUrl,
-            coverLetterText, githubUrl, personalSiteUrl?, source? }
-          phone is REQUIRED. Server rule: trim, reject empty, allow only digits,
-          spaces, ( ) . - and one leading +, then 7-15 digits after stripping
-          separators. Reject with 400 and a message (or field errors, below).
-
-     Errors (any endpoint): a non-2xx status and, ideally, a JSON body
-          { "error": "<short, safe, applicant-readable message>" }
-          Optional field-level detail is shown next to the field:
-          { "error": "...", "fields": { "phone": "Phone number is required" } }
-          (also accepted: "errors" as an object or [{ field, message }], or a
-          single "field"). Keys: fullName, email, phone, resumeUrl,
-          coverLetterText, githubUrl, personalSiteUrl.
-          A body with code "API_KEY_ERROR" (an employer-side problem) is never
-          shown to applicants; they see a generic "try again later" message.
-
-     Point the page at another origin by setting window.HIRELAB_API_BASE
-     before this script runs (that origin must allow CORS).
-     ===================================================================== */
   const API_BASE = String(window.HIRELAB_API_BASE || '').replace(/\/+$/, '');
   const applyPath = () => `/api/apply/${encodeURIComponent(positionId)}`;
 
@@ -861,10 +812,7 @@
       return /^https?:$/.test(u.protocol) ? u.href : null;
     } catch (e) { return null; }
   }
-  // Company details follow the dashboard's model: orgName plus
-  // orgProfile { website, industry, description }.
-  // Read from position.organization or from the flat orgName / orgProfile pair.
-  // Everything is optional; whatever the API doesn't send is simply not shown.
+
   function readOrg(pos){
     const o = pos.organization || pos.orgProfile || {};
     return {
@@ -977,9 +925,7 @@
       `HireLab is building your profile from your resume, cover letter, and GitHub activity now. The hiring team for ${pos.title} will see your evidenced read alongside every other applicant.`;
   }
 
-  // ---------- collapsible cards ----------
-  // Which layout collapses a card is set in CSS (data-collapse); here we only
-  // flip the open state and mirror it to aria-expanded. Cards start collapsed.
+
   function setOpen(card, open){
     card.classList.toggle('open', open);
     const btn = card.querySelector('.ch-toggle');
@@ -1021,9 +967,6 @@
     } catch (e) { return false; }
   }
 
-  // Phone is required. The server must enforce the same rule:
-  //   trim, reject empty, allow only digits, spaces, ( ) . - and one leading +,
-  //   then require 7–15 digits once separators are removed.
   const PHONE_ALLOWED = /^[+\d\s().-]+$/;
   const PHONE_DIGITS = /^\+?\d{7,15}$/;
   function isValidPhone(value){
