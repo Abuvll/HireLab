@@ -44,12 +44,13 @@ export async function POST(req: NextRequest) {
       };
     };
 
-    let user;
+        let user;
     try {
-      ({ user } = await prisma.$transaction(async (tx: TxClient) => {
+      user = await prisma.$transaction(async (tx) => {
         const organization = await tx.organization.create({
           data: { name: parsed.data.organizationName || "My Organization" },
         });
+
         const user = await tx.user.create({
           data: {
             email: parsed.data.email,
@@ -59,20 +60,16 @@ export async function POST(req: NextRequest) {
             orgRole: "OWNER",
           },
         });
-        return { organization, user };
-      }));
+
+        return user;
+      });
     } catch (err) {
-      // The findUnique check above has a TOCTOU gap under concurrent
-      // signups with the same email — the DB-level unique constraint on
-      // User.email is the real guard (per §3.2's security notes: enforce
-      // uniqueness at the DB level, not just app logic). Catch that
-      // specific race and surface the same friendly message, rather than
-      // a raw 500.
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
         throw badRequest("An account with that email already exists");
       }
       throw err;
     }
+
 
     const res = NextResponse.json(
       { user: { id: user.id, name: user.name, email: user.email, orgRole: user.orgRole } },
