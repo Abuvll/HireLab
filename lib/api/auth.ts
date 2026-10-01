@@ -11,7 +11,6 @@ export type AuthDeps = {
 };
 
 async function loadUserFromDb(userId: string): Promise<VerifiedUser | null> {
-  // Lazy import so unit tests that inject `deps` never construct a Prisma client.
   const { prisma } = await import("../db");
   const user = await prisma.user.findUnique({
     where: { id: userId },

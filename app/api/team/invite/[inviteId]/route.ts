@@ -4,11 +4,6 @@ import { requireRole } from "../../../../../lib/api/auth";
 import { notFound, errorResponse } from "../../../../../lib/api/errors";
 import { logAuditEvent } from "../../../../../lib/api/audit";
 
-// Not in the checklist's explicit §3.8 endpoint list, but a necessary
-// companion to POST /api/team/invite: a sent invite needs to be
-// cancellable (wrong email, changed their mind, invited the wrong role)
-// before it's accepted, same as most team-invite UIs.
-
 export async function DELETE(
   req: NextRequest,
   { params }: { params: { inviteId: string } }

@@ -12,9 +12,6 @@ export async function POST(req: NextRequest) {
       select: { id: true },
     });
 
-    // createMany + skipDuplicates rather than N upserts: this can be
-    // hundreds of rows for an org with a lot of history, and there's no
-    // per-row data to merge — an already-read row staying as-is is fine.
     await prisma.notificationRead.createMany({
       data: applications.map((a) => ({ userId: session.userId, applicationId: a.id })),
       skipDuplicates: true,

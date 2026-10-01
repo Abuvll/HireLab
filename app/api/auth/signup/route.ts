@@ -18,9 +18,7 @@ export async function POST(req: NextRequest) {
     const ip = getClientIp(req.headers);
     const rl = await checkRateLimitSafe(`signup-ip:${ip}`, 10, 3600);
     if (!rl.allowed) throw badRequest("Too many signup attempts from this network — try again later.");
-
-    // Server-side floor, independent of the frontend's length >= 6 check
-    // (§3.2's security notes — never trust the client's validation alone).
+    
     const strength = checkPasswordStrength(parsed.data.password);
     if (!strength.valid) throw badRequest(strength.error!);
 

@@ -4,13 +4,6 @@ import { prisma } from "../../../lib/db";
 import { requireAuth, requireRole } from "../../../lib/api/auth";
 import { badRequest, errorResponse } from "../../../lib/api/errors";
 
-// §3.31 — the checklist notes the frontend's Organization settings tab
-// doesn't gate itself with canManagePosition() the way team/position
-// edits do. That's a frontend-side gap (a Viewer would see an editable
-// form they can't actually submit successfully) — the enforcement that
-// actually matters is here: PATCH requires OWNER/ADMIN regardless of what
-// the UI shows.
-
 const updateOrgSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   website: z.string().url().max(300).nullable().optional(),

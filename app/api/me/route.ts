@@ -5,14 +5,6 @@ import { requireAuth } from "../../../lib/api/auth";
 import { verifyPassword } from "../../../lib/auth/password";
 import { badRequest, errorResponse } from "../../../lib/api/errors";
 
-// §3.29 — email doubles as the login identifier, so changing it is
-// treated as sensitive: this app has no email-verification-link
-// infrastructure to confirm the new address is actually reachable by the
-// account holder, so the mitigation used here is requiring the current
-// password to confirm it's really the account owner making the change —
-// not a full email-verification flow, but a real control against
-// "hijacked session silently changes the login email" account takeover.
-
 const updateMeSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   email: z.string().email().optional(),

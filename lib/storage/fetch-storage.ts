@@ -7,12 +7,6 @@ export class FileDownloadError extends Error {
     this.cause = cause;
   }
 }
-
-// §3.17 — /api/uploads/[filename] now requires either a session or this
-// shared secret (see that route for the full reasoning). Only ever
-// attached when the target URL's origin matches this app's own configured
-// origin — never sent to an arbitrary external URL, which would leak a
-// standing secret to whatever host happens to be in resumeUrl.
 function isOwnOrigin(url: string): boolean {
   const configured = process.env.NEXT_PUBLIC_APP_URL;
   if (!configured) return false;

@@ -21,7 +21,7 @@ export type RankableCandidate = {
   languages: string[]; 
   languageBreakdown: LanguageBreakdownEntry[]; 
   topSkills: string[]; 
-  // Every skill the resume extraction found (topSkills above is just the
+
   // few shown on a row). Used for the tech-stack filter and its options so
   // filtering sees the same skills the gate does (see hasSkillEvidence in
   // scoring/gate.ts). Falls back to topSkills when omitted.
@@ -65,7 +65,6 @@ export function computeStandout(percentiles: Omit<PercentileBreakdown, "applicat
   return STANDOUT_PHRASES[best];
 }
 
-// Everything a candidate can be said to "know", lower-cased: GitHub
 // languages, tooling detected in their repos, and skills from their resume.
 // The tech-stack filter matches against this whole set — the options offered
 // in the UI (collectTechOptions) are drawn from the same three sources, so a
@@ -99,9 +98,6 @@ function passesFilters(candidate: RankableCandidate, filters: FilterCriteria): b
   return true;
 }
 
-// Best match first. Ties are broken by name then id so the order (and
-// therefore pagination) is identical from one request to the next instead
-// of following whatever order the database happened to return.
 function byBestMatch(a: RankableCandidate, b: RankableCandidate): number {
   return b.matchPct - a.matchPct || a.name.localeCompare(b.name) || a.applicationId.localeCompare(b.applicationId);
 }
@@ -137,8 +133,6 @@ function toEntries(
   });
 }
 
-// Percentiles are always computed against the WHOLE qualified pool, so a
-// candidate's standing doesn't change depending on which filters are applied.
 function rankQualified(candidates: RankableCandidate[], filters: FilterCriteria) {
   const qualified = candidates.filter((c) => c.meetsRequirements);
   const rankable: RankableApplication[] = qualified.map((c) => ({
@@ -164,11 +158,6 @@ export function buildRankedList(
 
 export type RankedListEntryWithMatch = RankedListEntry & { matchesFilters: boolean };
 
-// The Position Details list: EVERY qualified candidate, with the ones that
-// satisfy all the active filters first (best match first) and everyone else
-// below them (also best match first). With no filters active they all
-// match, so this is the plain ranked list. topN applies to the combined
-// list, so the matches are what survives a small cut-off.
 export function buildRankedListWithMatches(
   candidates: RankableCandidate[],
   filters: FilterCriteria = {}
@@ -182,12 +171,6 @@ export function buildRankedListWithMatches(
   return { entries, matchedCount: matches.length };
 }
 
-
-// The tech-stack options offered by the filter panel: the most common
-// languages / tooling / resume skills across the WHOLE qualified pool, not
-// just the candidates left after filtering — otherwise every applied filter
-// would shrink the list of things you can filter by. Case-insensitive
-// de-duplication, most common first (ties alphabetical), first-seen casing.
 export function collectTechOptions(candidates: RankableCandidate[], max = 16): string[] {
   const tally = new Map<string, { label: string; count: number }>();
   for (const c of candidates) {

@@ -9,11 +9,6 @@ import { checkRateLimitSafe, getClientIp } from "../../../../lib/security/rate-l
 import { checkPasswordStrength } from "../../../../lib/security/password-strength";
 import { logAuditEvent } from "../../../../lib/api/audit";
 
-// Not in the checklist's explicit endpoint list for §3.8, but "handle
-// accept/decline" is listed as required backend logic — an invite flow
-// with no way to actually accept isn't complete. Named to match the
-// acceptUrl built in POST /api/team/invite (/accept-invite?token=...).
-
 const acceptSchema = z.object({
   token: z.string().min(1),
   password: z.string().min(8).max(200),
@@ -40,9 +35,6 @@ export async function POST(req: NextRequest) {
       throw badRequest("This invite link is invalid or has expired — ask for a new one.");
     }
 
-    // Someone may have joined via another path (e.g. signed up directly)
-    // with the same email between invite and acceptance — treat that as
-    // "already a member" rather than creating a duplicate/conflicting account.
     const existingUser = await prisma.user.findUnique({ where: { email: invite.email } });
     if (existingUser) throw badRequest("An account with this email already exists — try logging in instead.");
 

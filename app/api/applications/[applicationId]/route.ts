@@ -20,12 +20,6 @@ export async function GET(
       include: { resumeExtract: true, githubAnalysis: true, score: true },
     });
 
-    // Analysis that FAILED often failed because of the org's AI key (missing,
-    // revoked, out of credit — see lib/jobs/analyze-application.ts). The
-    // failure reason isn't otherwise shown anywhere, so check the key now:
-    // if it's the culprit, say so (API_KEY_ERROR -> the dashboard's
-    // "Update API Keys" pop-up) rather than a bare "hasn't finished
-    // analysis". If the key is fine the generic message below still applies.
     if (application?.status === "FAILED") {
       await assertOrgApiKeyUsable(session.organizationId, {
         canManage: session.orgRole === "OWNER" || session.orgRole === "ADMIN",

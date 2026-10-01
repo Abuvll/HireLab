@@ -67,14 +67,6 @@ export type EvidenceRow = {
   evidence: string;
 };
 
-// Score dimensions, redesigned:
-// - reqMatch: graded (0-100) version of the gate check below — % of
-//   requirement chips satisfied (skills, experience-years, location), rather
-//   than the gate's hard pass/fail. Replaces the old "experience" dimension
-//   and absorbs the skill-relevance portion that used to live in "technical".
-// - codeQuality: repo complexity + test coverage only — the part of the old
-//   "technical" score that wasn't really about matching the JD.
-// - consistency / collaboration: unchanged from before.
 export type ScoreResult = {
   meetsRequirements: boolean; // still a hard gate, independent of the graded reqMatch score
   matchPct: number;
@@ -85,10 +77,6 @@ export type ScoreResult = {
   evidenceMatrix: EvidenceRow[];
 };
 
-// Equal-weighted: each dimension represents a distinct, comparably-important
-// axis of evidence (what you claim to have, how consistently you work, how
-// you work with others, how well you actually write code) rather than one
-// dimension dominating the overall number.
 export const DEFAULT_WEIGHTS = {
   reqMatch: 0.25,
   consistency: 0.25,

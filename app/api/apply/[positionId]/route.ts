@@ -12,16 +12,10 @@ export async function GET(
   { params }: { params: { positionId: string } }
 ) {
   try {
-    // Public + unauthenticated: rate-limit by IP to slow down position-ID
-    // enumeration/scraping (§3.15's security notes). Generous limit since
-    // this also backs normal repeat page loads for a real applicant.
     const ip = getClientIp(req.headers);
     const rl = await checkRateLimitSafe(`apply-view:${ip}`, 60, 60);
     if (!rl.allowed) throw badRequest("Too many requests — please slow down.");
 
-    // Organization details are shown alongside the posting (the dashboard's New Position page reminds the org
-    // to keep this current — see dashboard-ui-changes-4.md). Only the fields meant for public display are
-    // selected: contactEmail/contactPhone are for internal use, not shown to applicants.
     const position = await prisma.position.findUnique({
       where: { id: params.positionId },
       include: { organization: { select: { name: true, website: true, industry: true, description: true } } },
@@ -70,15 +64,9 @@ export async function POST(
     const body = await req.json().catch(() => null);
     const parsed = applySchema.safeParse(body);
     if (!parsed.success) {
-      // apply.html reads a field-level `fields` map (see its embedded API-contract comment) and shows each
-      // message next to the relevant input, rather than only a single message in a banner at the top.
       throw badRequest(parsed.error.issues[0]?.message ?? "Invalid application", { fields: zodIssuesToFields(parsed.error) });
     }
 
-    // §3.18: needs CAPTCHA or equivalent bot protection. Skipped (not
-    // failed) when TURNSTILE_SECRET_KEY isn't configured — see
-    // lib/security/captcha.ts for why that's a documented, visible gap
-    // rather than a silent one.
     const captchaOk = await verifyCaptchaToken(parsed.data.captchaToken ?? "", ip);
     if (!captchaOk) throw badRequest("CAPTCHA verification failed — please try again.");
 
@@ -100,20 +88,11 @@ export async function POST(
         },
       });
     } catch (err) {
-      // §3.18: "one application per candidate per position" is enforced
-      // at the DB level (see the @@unique on Application in schema.prisma)
-      // — this is the friendly-error side of that constraint.
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
         throw badRequest("You've already submitted an application for this position.");
       }
       throw err;
     }
-
-    // The application row is already safely committed at this point. A transient queue/Redis outage must not
-    // turn into a failed submission for the applicant — their data is saved either way, and losing the request
-    // here would also mean losing the resume upload that already succeeded. Analysis is delayed, not lost, once
-    // the queue is reachable again; this does not retry the enqueue itself (a known gap — there's no
-    // reconciliation job today that re-enqueues an application whose initial enqueue failed).
     try {
       await enqueueAnalysis(application.id);
     } catch (err) {

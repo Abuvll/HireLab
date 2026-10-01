@@ -6,12 +6,7 @@ import { scanBuffer, isVirusScanConfigured } from "../../../../../lib/security/v
 import { checkRateLimitSafe, getClientIp } from "../../../../../lib/security/rate-limit";
 
 
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB — matches apply.html's "PDF or DOCX, up to 10MB" copy
-
-// §3.17 — "one of the highest-risk surfaces in the whole app": public,
-// unauthenticated, accepts arbitrary file uploads. Layered defenses below:
-// rate limiting, a hard size cap, real content-sniffing (not just trusting
-// the extension), and virus scanning when configured.
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; 
 
 export async function POST(
   req: NextRequest,
@@ -33,9 +28,6 @@ export async function POST(
 
     const buffer = Buffer.from(await file.arrayBuffer());
 
-    // Real content-sniffing: the extension/MIME header are whatever the
-    // client claims and are trivially spoofed (rename a .exe to .pdf) —
-    // this checks the actual file bytes instead.
     const detectedType = detectFileType(buffer);
     if (!detectedType) {
       throw badRequest("This doesn't look like a valid PDF or DOCX file. Only .pdf and .docx are accepted.");
@@ -46,12 +38,9 @@ export async function POST(
       if (scanResult.scanned && !scanResult.clean) {
         throw badRequest("This file was flagged by virus scanning and can't be accepted.");
       }
-      // scanned: false (e.g. clamd unreachable) intentionally does NOT
-      // block the upload here — see UPLOAD_REQUIRE_VIRUS_SCAN below for
-      // the stricter mode.
+
     } else if (process.env.UPLOAD_REQUIRE_VIRUS_SCAN === "true") {
-      // Explicit opt-in for deployments that want to hard-fail uploads
-      // rather than accept them unscanned when CLAMAV_HOST isn't reachable.
+    
       throw badRequest("File upload is temporarily unavailable — please try again shortly.");
     }
 

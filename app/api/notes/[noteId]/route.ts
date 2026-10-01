@@ -4,11 +4,6 @@ import { prisma } from "../../../../lib/db";
 import { requireAuth } from "../../../../lib/api/auth";
 import { badRequest, forbidden, notFound, errorResponse } from "../../../../lib/api/errors";
 
-// §3.23 permission rules: an author can edit their own note; an author OR
-// an OWNER/ADMIN can delete a note (so a manager can moderate/remove a
-// note even if they didn't write it, but can't silently rewrite someone
-// else's words).
-
 const updateNoteSchema = z.object({ text: z.string().trim().min(1).max(5000) });
 
 async function loadNoteScopedToOrg(noteId: string, organizationId: string) {

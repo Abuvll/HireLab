@@ -4,9 +4,7 @@ export class ApiError extends Error {
   constructor(
     public readonly status: number,
     message: string,
-    // Optional machine-readable fields merged into the JSON body next to
-    // `error` (e.g. { code, reason } for API-key failures — see
-    // lib/api/api-key-error.ts). Non-sensitive values only.
+
     public readonly extra?: Record<string, unknown>
   ) {
     super(message);

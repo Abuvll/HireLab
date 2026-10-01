@@ -3,21 +3,6 @@ import { readLocalFile, mimeTypeForExtension, FileNotFoundError, InvalidUploadEr
 import { requireAuth } from "../../../../lib/api/auth";
 import { ApiError, errorResponse, badRequest, notFound, unauthorized } from "../../../../lib/api/errors";
 
-// §3.17's security notes flag this as one of the highest-risk endpoints in
-// the app: resumes contain PII, and this used to be fully public with no
-// auth at all — anyone with (or guessing) the UUID filename could fetch
-// any resume. Two legitimate callers need access without a browser
-// session: the background worker (lib/storage/fetch-storage.ts, a plain
-// server-side `fetch()` with no cookie jar) downloading a resume to run
-// text extraction, and the same worker isn't the only non-browser caller
-// this might ever need — so the gate is "a valid employer session, OR the
-// shared internal-worker secret," not "a valid session, full stop."
-//
-// This is real, working access control, not a placeholder — but it's not
-// the full destination state described in §3.17 (object storage +
-// per-request signed URLs, with no standing secret at all). Documented as
-// a deliberate, scoped improvement rather than the complete migration —
-// see the production-readiness notes for the S3 migration sketch.
 
 function hasValidInternalToken(req: NextRequest): boolean {
   const provided = req.headers.get("x-internal-worker-token");
@@ -31,9 +16,6 @@ export async function GET(
 ) {
   try {
     if (!hasValidInternalToken(req)) {
-      // requireAuth re-checks the account in the database, so a team member
-      // who has since been removed can't keep opening resumes with an old
-      // (still validly signed) cookie.
       try {
         await requireAuth(req);
       } catch (err) {

@@ -1,12 +1,4 @@
-// Real server-side password strength enforcement — the frontend only
-// checks length >= 6 client-side, which is not a floor to trust (§3.2's
-// security notes call this out explicitly). Deliberately NOT requiring a
-// specific mix of character classes (a special character, etc.): modern
-// guidance (e.g. NIST SP 800-63B) favors length over arbitrary complexity
-// rules, which mostly train people toward predictable substitutions
-// ("password" -> "P@ssword1") rather than actually stronger secrets. The
-// bar here is: reasonably long, and not just a run of the same character
-// or a handful of extremely common passwords.
+
 
 const MIN_LENGTH = 8;
 

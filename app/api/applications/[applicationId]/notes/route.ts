@@ -4,11 +4,6 @@ import { prisma } from "../../../../../lib/db";
 import { requireApplicationAccess } from "../../../../../lib/api/application-access";
 import { badRequest, forbidden, errorResponse } from "../../../../../lib/api/errors";
 
-// §3.23 — requireApplicationAccess already verifies the application
-// belongs to the caller's organization (see lib/api/application-access.ts),
-// which covers the "verify the note's candidate belongs to the caller's
-// org" security requirement for every operation here.
-
 const createNoteSchema = z.object({ text: z.string().trim().min(1).max(5000) });
 
 export async function GET(

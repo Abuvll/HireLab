@@ -6,12 +6,6 @@ function clamp(n: number, min = 0, max = 100): number {
   return Math.max(min, Math.min(max, n));
 }
 
-// Graded (0-100) version of the gate check in gate.ts: instead of a hard
-// pass/fail, each requirement chip contributes a 0-1 satisfaction score,
-// averaged across all chips. Uses the exact same evidence rules as the gate
-// (hasSkillEvidence, parseYearsRequirement) so a candidate who narrowly
-// fails the gate still gets a reqMatch score that reflects how close they
-// were, rather than falling off a cliff to 0.
 export function computeReqMatchScore(
   resume: ResumeExtractData,
   github: GithubAnalysisData,
@@ -35,10 +29,6 @@ export function computeReqMatchScore(
   return Math.round(clamp(avg * 100));
 }
 
-// Code quality only — repo complexity + test coverage. Relevance-to-the-JD
-// (what "technical" used to blend in via %-of-code-in-required-languages)
-// now lives entirely in reqMatch above, so this stays a clean signal of
-// "how well-built is this person's code", independent of what the role asks for.
 export function computeCodeQualityScore(github: GithubAnalysisData): number {
   const originalRepos = github.repos.filter((r) => r.original);
   const avgComplexity =

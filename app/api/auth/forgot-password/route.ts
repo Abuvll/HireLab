@@ -6,12 +6,6 @@ import { sendEmail, passwordResetEmail } from "../../../../lib/email/send";
 import { checkRateLimitSafe, getClientIp } from "../../../../lib/security/rate-limit";
 import { badRequest, errorResponse } from "../../../../lib/api/errors";
 
-// §3.4 — the central security requirement here is "never reveal whether
-// an email exists in the system via response differences/timing." This
-// always returns the same 200 + generic message, whether or not the email
-// matches an account, and does the same amount of work (a DB lookup, at
-// minimum) either way so a timing side-channel doesn't leak it either.
-
 const RESET_TOKEN_EXPIRY_MINUTES = 30;
 
 const forgotPasswordSchema = z.object({ email: z.string().email() });

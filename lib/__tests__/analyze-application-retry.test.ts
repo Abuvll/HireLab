@@ -5,12 +5,6 @@ import type { AnthropicLikeClient } from "../extraction/resume-extract";
 import { LiteLLMApiError } from "../extraction/litellm-client";
 import { UnrecoverableError } from "bullmq";
 
-// Companion to analyze-application.test.ts, which covers the same isFinalAttempt/UnrecoverableError behavior
-// but needs vi.mock (to fake out extractResumeData/analyzeGithubProfile/scoreApplication) to reach the happy
-// path — this file avoids vi.mock entirely by making the FAKE LLM CLIENT throw directly from messages.create(),
-// which the real (unmocked) extractResumeData propagates untouched, so it's fully executable in any sandbox
-// that only lacks vi.mock's module-interception support.
-
 const credentialFixture: OrgLlmCredential = { decryptedKey: "sk-ant-fake-key", model: "anthropic/claude-3-5-sonnet-20241022", provider: "ANTHROPIC" };
 
 function makeRepository(overrides: Partial<AnalysisRepository> = {}): AnalysisRepository {

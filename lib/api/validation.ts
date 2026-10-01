@@ -1,11 +1,6 @@
 import { z } from "zod";
 import { CONTACT_METHODS, EMPLOYMENT_TYPES, ORG_ROLES, POSITION_STATUSES } from "../domain-enums";
 
-// Maps a failed Zod parse to a flat { fieldName: message } object, for callers (currently just the public apply
-// route) that want to show each validation error next to its own input rather than only the first issue in a
-// single banner. Only top-level, string-keyed issues are mapped — a nested/array path (there are none in
-// applySchema today) is skipped rather than joined into something a frontend's flat field lookup wouldn't match.
-// The first message for a given field wins, matching how issues[0] is used for the top-level `error` string.
 export function zodIssuesToFields(error: z.ZodError): Record<string, string> {
   const fields: Record<string, string> = {};
   for (const issue of error.issues) {
@@ -38,11 +33,6 @@ export const applySchema = z
     githubUrl: z.string().url(),
     personalSiteUrl: z.string().url().optional(),
     source: z.string().max(100).optional(),
-    // Populated by the CAPTCHA widget once the frontend adds one (see
-    // lib/security/captcha.ts) — optional at the schema level since
-    // verifyCaptchaToken() itself is a no-op until TURNSTILE_SECRET_KEY is
-    // configured, rather than the schema hard-requiring a field the
-    // current frontend doesn't send yet.
     captchaToken: z.string().optional(),
   })
   .refine((data) => (data.contactMethod === "EMAIL" ? !!data.email : true), {
@@ -53,12 +43,6 @@ export const applySchema = z
     message: "phone is required when contactMethod is PHONE",
     path: ["phone"],
   });
-
-// The dashboard now sends requirement chips as plain strings — it dropped
-// its own client-side type classification (its inferChipType() is a stub
-// that always returns "default"). We still accept the older {label, type}
-// object shape too, so nothing already relying on it breaks; either way,
-// normalizeRequirementChips() below fills in a real type server-side.
 const requirementChipInputSchema = z.union([
   z.string().min(1).max(200),
   z.object({
@@ -84,8 +68,7 @@ export function normalizeRequirementChips(
   });
 }
 
-// Optional free-text details on the New position form. The form's "None" (and
-// an empty/omitted value) all mean "not specified" and are stored as null.
+
 const POSITION_DETAIL_MAX = 120;
 function optionalDetail(label: string) {
   return z
@@ -95,7 +78,7 @@ function optionalDetail(label: string) {
     .nullish()
     .transform((v) => (v == null || v === "" || v.toLowerCase() === "none" ? null : v));
 }
-// The form's preset vacancy options; anything else must be a whole number (its "Custom number" box is digits only).
+
 export const VACANCY_PRESETS = ["1", "2", "3", "4", "5", "6\u201310", "More than 10"];
 
 const positionFieldsSchema = z.object({
@@ -104,7 +87,7 @@ const positionFieldsSchema = z.object({
   employmentType: z.enum(EMPLOYMENT_TYPES).default("FULL_TIME"),
   description: z.string().min(1),
   requirementChips: z.array(requirementChipInputSchema),
-  // The posting's deadline: an HTML <input type="date"> value, e.g. "2026-12-31".
+
   // Required (the dashboard blocks publishing without one and this enforces it
   // for API callers too). It doesn't gate applications. On update (.partial()
   // below) it may be omitted, but if it is sent it must be a real date:
@@ -142,7 +125,6 @@ export const rankedListQuerySchema = z.object({
     .transform((v) => (v ? v.split(",").map((s) => s.trim()).filter(Boolean) : undefined)),
   minConsistency: z.coerce.number().min(0).max(100).optional(),
   minCollaboration: z.coerce.number().min(0).max(100).optional(),
-  // NOT z.coerce.boolean(): that is Boolean(value), so the query-string
   // "false" (a non-empty string) would coerce to true and switch the
   // shipped-only filter ON. Parse the string explicitly instead.
   shippedOnly: z

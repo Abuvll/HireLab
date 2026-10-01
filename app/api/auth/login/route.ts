@@ -12,9 +12,6 @@ export async function POST(req: NextRequest) {
     const parsed = loginSchema.safeParse(body);
     if (!parsed.success) throw badRequest(parsed.error.issues[0]?.message ?? "Invalid request body");
 
-    // Both by IP (stop one attacker spraying many emails) and by the
-    // submitted email (stop targeted brute-forcing of one account from
-    // many IPs/a botnet) — see §3.1's security notes.
     const ip = getClientIp(req.headers);
     const [ipLimit, emailLimit] = await Promise.all([
       checkRateLimitSafe(`login-ip:${ip}`, 20, 300),

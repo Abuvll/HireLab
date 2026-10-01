@@ -9,28 +9,17 @@ import { logAuditEvent } from "../../../../lib/api/audit";
 import { LLM_PROVIDERS, LLM_PROVIDER_PREFIX } from "../../../../lib/domain-enums";
 import { z } from "zod";
 
-// See the schema comment on OrgApiKey and lib/security/encryption.ts for what "encrypted at rest" means here.
-// The raw key is NEVER returned by GET after the initial POST response — this file computes and stores
-// `last4` once, at save time, specifically so display never requires decrypting the real key again.
-
 const saveKeySchema = z
   .object({
     apiKey: z.string().min(20).max(500),
     provider: z.enum(LLM_PROVIDERS),
     model: z.string().min(1).max(200),
   })
-  // A BYOK key only works for the provider it belongs to — the model chosen alongside it must actually be
-  // that provider's, or the request would reach LiteLLM with a key/model pairing that could never work (e.g.
-  // an Anthropic key with an "openai/..." model). Caught here, at save time, rather than discovered later as a
-  // confusing analysis failure.
   .refine((data) => data.model.startsWith(`${LLM_PROVIDER_PREFIX[data.provider]}/`), {
     message: "That model doesn't belong to the selected provider.",
     path: ["model"],
   });
 
-// No fake prefix (the old "sk-or-v1-" was OpenRouter's own format, which is meaningless — actively wrong — for
-// a real provider key now that this is true BYOK). Provider name plus masked digits is accurate for every
-// provider without guessing at a key-format convention that differs across, and can change within, providers.
 function maskedKeyDisplay(provider: (typeof LLM_PROVIDERS)[number], last4Digits: string): string {
   return `${provider} ••••••••${last4Digits}`;
 }
@@ -59,9 +48,6 @@ export async function GET(req: NextRequest) {
       maskedKey: maskedKeyDisplay(key.provider, key.last4),
       provider: key.provider,
       model: key.model,
-      // null when nothing reported a cost for any event yet (LiteLLM's cost reporting is best-effort — see
-      // lib/extraction/litellm-client.ts) — the frontend's existing "$0.00 · no cap set" copy already handles
-      // a zero/empty value gracefully.
       usageThisCycle: usage._sum.costUsd,
     });
   } catch (err) {
@@ -73,9 +59,6 @@ export async function POST(req: NextRequest) {
   try {
     const session = await requireRole(req, ["OWNER", "ADMIN"]);
 
-    // Rate-limited per-org, not just per-IP: the risk here is someone with
-    // a valid session probing many candidate keys, not just raw request
-    // volume.
     const rl = await checkRateLimitSafe(`api-key-save:${session.organizationId}`, 5, 60);
     if (!rl.allowed) throw badRequest("Too many attempts — wait a minute and try again.");
 
@@ -150,15 +133,6 @@ export async function DELETE(req: NextRequest) {
       targetType: "OrgApiKey",
     });
 
-    // No further action needed for in-flight jobs: analyzeApplication()
-    // resolves the credential once at job start and holds the decrypted
-    // key in memory for that job's duration, so a delete mid-job doesn't
-    // interrupt it. Any *new* job enqueued after this point will find no
-    // credential and fail cleanly via NoLlmCredentialError (see
-    // lib/jobs/analyze-application.ts) — surfaced to the dashboard as a
-    // FAILED application with a clear reason, not a silent hang. Unchanged
-    // by the LiteLLM migration: this was never about which client made the
-    // actual provider call, only about when the key is read.
     return NextResponse.json({ hasKey: false, maskedKey: null, provider: null, model: null, usageThisCycle: null });
   } catch (err) {
     return errorResponse(err);

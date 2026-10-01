@@ -38,9 +38,6 @@ export async function POST(req: NextRequest) {
     await prisma.$transaction([
       prisma.user.update({ where: { id: resetToken.userId }, data: { passwordHash } }),
       prisma.passwordResetToken.update({ where: { id: resetToken.id }, data: { usedAt: new Date() } }),
-      // Invalidate any other outstanding reset tokens for this user too —
-      // a second, older "forgot password" email shouldn't still work
-      // after this one has been used.
       prisma.passwordResetToken.updateMany({
         where: { userId: resetToken.userId, usedAt: null, id: { not: resetToken.id } },
         data: { usedAt: new Date() },

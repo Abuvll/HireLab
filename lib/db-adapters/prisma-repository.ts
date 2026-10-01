@@ -49,8 +49,7 @@ export class PrismaAnalysisRepository implements AnalysisRepository {
         model: event.model,
         tokensIn: event.tokensIn,
         tokensOut: event.tokensOut,
-        // Undefined (not 0) when the provider/proxy didn't report a cost — Prisma leaves the column null in
-        // that case, same as every usage event before this migration always did.
+       
         costUsd: event.costUsd,
       },
     });

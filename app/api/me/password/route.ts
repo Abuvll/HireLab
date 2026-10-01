@@ -7,19 +7,6 @@ import { badRequest, errorResponse } from "../../../../lib/api/errors";
 import { checkRateLimitSafe } from "../../../../lib/security/rate-limit";
 import { checkPasswordStrength } from "../../../../lib/security/password-strength";
 
-// §3.30 — the frontend's own change-password form never actually checks
-// the current password against anything (it can't; only the backend has
-// the hash). This is the real check the checklist calls out as missing.
-//
-// NOTE ON SCOPE: this does not additionally revoke other active sessions
-// on password change. Doing that correctly would mean moving session
-// verification from a pure stateless-JWT check (see lib/auth/session.ts)
-// to one that also hits the DB on every authenticated request — a real
-// architectural change to the core auth path every route in this app
-// depends on, not something to bolt on quickly under this change's scope.
-// Recorded as a deliberate, documented limitation rather than silently
-// left undone — see the production-readiness notes.
-
 const changePasswordSchema = z
   .object({
     currentPassword: z.string().min(1),

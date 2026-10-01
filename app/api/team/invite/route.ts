@@ -54,9 +54,6 @@ export async function POST(req: NextRequest) {
         invitedByUserId: session.userId,
         expiresAt: new Date(Date.now() + INVITE_EXPIRY_DAYS * 24 * 60 * 60 * 1000),
       },
-      // Re-inviting (e.g. the previous link expired) issues a fresh token
-      // rather than erroring — the old link simply stops working since its
-      // hash no longer matches any row.
       update: {
         name: parsed.data.name,
         role: parsed.data.role,

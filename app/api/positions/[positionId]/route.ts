@@ -34,8 +34,6 @@ export async function POST(
     const parsed = teamInviteSchema.safeParse(body);
     if (!parsed.success) throw badRequest(parsed.error.issues[0]?.message ?? "Invalid invite data");
 
-    // Privilege escalation: an Admin can't hand out Owner (same rule as
-    // POST /api/team/invite).
     if (parsed.data.role === "OWNER" && session.orgRole !== "OWNER") {
       throw forbidden("Only an Owner can assign the Owner role");
     }

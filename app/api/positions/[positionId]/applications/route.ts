@@ -26,12 +26,6 @@ export async function GET(
       include: { score: true, githubAnalysis: true, resumeExtract: true },
     });
 
-    // Explicit shape for the raw query result: the un-generated Prisma
-    // client falls back to a type that leaves callback parameters
-    // implicitly `any` under this project's strict tsconfig — `tsc`
-    // caught this. Declaring the minimal shape we actually rely on
-    // keeps it correctly typed both now and once `prisma generate` runs
-    // for real (the real generated rows satisfy this structurally).
     type ApplicationRow = {
       id: string;
       fullName: string;
@@ -106,7 +100,6 @@ export async function GET(
         topSkills: entry.topSkills,
         standoutLine: entry.standout,
         hasShippedProject: candidateById.get(entry.applicationId)?.hasShippedProject ?? false,
-        // true for candidates that satisfy every active filter (all of them when none is active)
         matchesFilters: entry.matchesFilters,
         status: deriveApplicationStatus(row.status, row.score?.meetsRequirements),
       };
@@ -115,11 +108,7 @@ export async function GET(
     return NextResponse.json({
       total: applications.length,
       qualified: candidates.filter((c) => c.meetsRequirements).length,
-      // How many qualified candidates satisfy every active filter. The list
-      // returned puts exactly these first, then the rest.
       matched: ranked.matchedCount,
-      // Options for the tech-stack filter, drawn from the whole qualified
-      // pool (not just the rows that survived the filters above).
       techOptions: collectTechOptions(candidates),
       applications: responseApplications,
     });
