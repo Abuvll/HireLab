@@ -4,11 +4,6 @@ import type { SessionPayload } from "../auth/session";
 import type { OrgRole } from "../domain-enums";
 import { unauthorized, forbidden } from "./errors";
 
-// The signed session cookie only proves WHO is calling. What that person may
-// do is read fresh from the database on every request: the role inside the
-// JWT is frozen at login and the token lives for 7 days, so trusting it
-// would let a demoted user keep their old permissions — and a removed team
-// member keep their access to the organization — until it expired.
 export type VerifiedUser = { id: string; organizationId: string; orgRole: OrgRole };
 
 export type AuthDeps = {
@@ -32,8 +27,7 @@ export async function requireAuth(req: NextRequest, deps: AuthDeps = defaultDeps
   if (!session) throw unauthorized();
 
   const user = await deps.loadUser(session.userId);
-  // Valid signature but the account no longer exists (e.g. removed from
-  // the team): treat exactly like an expired session.
+ 
   if (!user) throw unauthorized();
 
   return { userId: user.id, organizationId: user.organizationId, orgRole: user.orgRole };

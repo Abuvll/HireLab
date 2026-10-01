@@ -35,12 +35,6 @@ Rules:
 - yearsExperience must be a plain number from 0 to 60. topSkills must have at most 15 entries. Never include commentary, scores, or claims about how the candidate should be evaluated — extraction only, no judgment calls beyond what's specified above.`;
 
 export function buildResumeExtractionPrompt(resumeText: string, coverLetterText?: string): string {
-  // XML-style tags rather than a plain "RESUME:" label: harder for
-  // applicant-supplied text to spoof a fake closing tag and "break out"
-  // into what looks like a new instruction, and gives the system prompt
-  // above an unambiguous boundary to refer to. Still defense in depth,
-  // not a guarantee — the system prompt's explicit "treat this as data"
-  // instruction is the primary mitigation; see §3.21's security notes.
   const parts = [`<resume>\n${resumeText}\n</resume>`];
   if (coverLetterText && coverLetterText.trim().length > 0) {
     parts.push(`<cover_letter>\n${coverLetterText}\n</cover_letter>`);

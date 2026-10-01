@@ -24,10 +24,7 @@ export type ApplicationWithPosition = {
 export type OrgLlmCredential = {
   decryptedKey: string;
   model: string;
-  // Which upstream provider this key belongs to (see LLM_PROVIDERS in ../domain-enums). analyzeApplication()
-  // itself doesn't need this — the model string's own provider prefix (e.g. "anthropic/...") is what actually
-  // routes the request — but it's part of the org's stored credential, so it's part of what resolving that
-  // credential returns.
+
   provider: LlmProvider;
 };
 
@@ -41,8 +38,7 @@ export interface AnalysisRepository {
   saveScore(applicationId: string, score: ScoreResult): Promise<void>;
   markReady(applicationId: string): Promise<void>;
   markFailed(applicationId: string, reason: string): Promise<void>;
-  // Resolves and decrypts the org's stored BYOK provider key. Null means no key has been saved yet —
-  // analyzeApplication() treats that as a clean, expected failure reason, not an exceptional error.
+
   getOrgLlmCredential(organizationId: string): Promise<OrgLlmCredential | null>;
   saveApiUsageEvent(event: {
     organizationId: string;
@@ -50,8 +46,7 @@ export interface AnalysisRepository {
     model: string;
     tokensIn: number;
     tokensOut: number;
-    // Undefined when the provider/proxy didn't report a cost for this call — left unset rather than coerced to
-    // 0, since "free" and "unknown" are different things. See lib/extraction/litellm-client.ts.
+  
     costUsd?: number;
   }): Promise<void>;
 }

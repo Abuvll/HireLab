@@ -16,9 +16,6 @@ export interface AnthropicLikeClient {
     }): Promise<{
       content: { type: string; text?: string }[];
       usage?: { input_tokens: number; output_tokens: number };
-      // Populated when the client can report it (see lib/extraction/litellm-client.ts) — OpenRouter's response
-      // never included this, so it was always undefined before; left optional rather than required so any
-      // future client implementation isn't forced to support cost reporting.
       costUsd?: number;
     }>;
   };
@@ -66,8 +63,7 @@ export type ExtractResumeDataParams = {
 export type ExtractResumeDataResult = {
   data: ResumeExtractData;
   usage: { inputTokens: number; outputTokens: number };
-  // Summed across every call made (the JSON-repair retry below costs money too) — undefined if the client
-  // didn't report a cost for any call, never coerced to 0 (an unknown cost and a free call are different things).
+
   costUsd?: number;
 };
 

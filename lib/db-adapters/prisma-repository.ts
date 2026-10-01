@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 import { decryptSecret } from "../security/encryption";
 import type { AnalysisRepository, ApplicationWithPosition, OrgLlmCredential } from "../jobs/types";
@@ -60,13 +61,13 @@ export class PrismaAnalysisRepository implements AnalysisRepository {
       where: { applicationId },
       create: {
         applicationId,
-        education: data.education,
+        education: data.education ?? Prisma.JsonNull,
         yearsExperience: data.yearsExperience,
         topSkills: data.topSkills,
         experience: data.experience,
       },
       update: {
-        education: data.education,
+        education: data.education ?? Prisma.JsonNull,
         yearsExperience: data.yearsExperience,
         topSkills: data.topSkills,
         experience: data.experience,

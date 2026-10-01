@@ -12,9 +12,7 @@ export type AnalyzeApplicationDeps = {
   repository: AnalysisRepository;
   fileStorage: FileStorage;
   githubClient: GithubProfileFetcher;
-  // The org's own key, not a single global credential — constructs a client per job from whatever key that
-  // org has configured. The real wiring (lib/jobs/worker.ts) passes (apiKey) => new LiteLLMClient(apiKey);
-  // tests inject a fake so no real network/encryption is needed to test the pipeline's control flow.
+
   llmClientFactory: (apiKey: string) => AnthropicLikeClient;
 };
 
@@ -25,10 +23,6 @@ export class ApplicationNotFoundError extends Error {
   }
 }
 
-// Thrown (and caught into a normal markFailed(), not re-thrown as a crash)
-// when the org hasn't configured an AI provider key yet. Distinct error
-// type so callers/logs can tell "org hasn't set this up" apart from "the
-// pipeline broke" — see the failureReason surfaced to the dashboard.
 export class NoLlmCredentialError extends Error {
   constructor() {
     super("No AI provider key configured for this organization — add one in Settings → API Keys.");
@@ -39,10 +33,7 @@ export class NoLlmCredentialError extends Error {
 export async function analyzeApplication(
   applicationId: string,
   deps: AnalyzeApplicationDeps,
-  // isFinalAttempt: whether BullMQ has no retries left after this one (see lib/jobs/worker.ts, which computes
-  // this from job.attemptsMade/job.opts.attempts before calling in). Defaults to true — i.e. "always mark
-  // failed on any error" — so a caller (or an existing test) that doesn't pass it gets the old, simpler
-  // behavior rather than silently swallowing a failure it didn't know to expect might retry.
+
   opts: { isFinalAttempt?: boolean } = {}
 ): Promise<void> {
   const isFinalAttempt = opts.isFinalAttempt ?? true;
@@ -87,17 +78,8 @@ export async function analyzeApplication(
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
 
-    // Some failures won't be fixed by retrying with the exact same inputs — the org's key was rejected, or the
-    // model they picked doesn't exist. Retrying those 3x with unchanged inputs just delays a foregone
-    // conclusion (and for a real provider call, spends tokens on attempts that were always going to fail the
-    // same way). UnrecoverableError tells BullMQ to stop retrying after this attempt regardless of the
-    // configured `attempts` count.
     const unrecoverable = err instanceof LiteLLMApiError && (err.kind === "auth" || err.kind === "model_unavailable");
 
-    // A transient failure (timeout, connectivity, rate limit, or anything not specifically classified) is only
-    // recorded as a user-visible FAILED once BullMQ has actually given up — not on attempt 1 of 3, when a
-    // retry 5s later might succeed. Marking it failed immediately on every attempt showed the employer a false
-    // failure during the retry window even when the job went on to succeed a moment later.
     if (unrecoverable || isFinalAttempt) {
       await deps.repository.markFailed(applicationId, reason);
     }

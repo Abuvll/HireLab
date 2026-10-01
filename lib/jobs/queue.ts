@@ -28,13 +28,6 @@ export async function enqueueAnalysis(applicationId: string): Promise<void> {
     "analyze",
     { applicationId },
     {
-      // A deterministic jobId (rather than BullMQ's default random one) makes a duplicate enqueue for the same
-      // application a safe no-op instead of a second concurrent job. Not reachable today — there's exactly one
-      // call site (POST /api/apply/:positionId, right after creating the application), and the DB's own unique
-      // constraint on [positionId, email] means an application can't be created twice in the first place — but
-      // it becomes reachable the moment anything else calls enqueueAnalysis for an application that might
-      // already have a job in flight (an admin "retry analysis" action, a reconciliation sweep for stuck
-      // PROCESSING rows, etc.), and costs nothing to have in place before that exists.
       jobId: `analyze:${applicationId}`,
       attempts: 3,
       backoff: { type: "exponential", delay: 5000 },
