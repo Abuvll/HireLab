@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "../../../../lib/db";
-import { requireRole } from "../../../../lib/api/auth";
-import { badRequest, forbidden, errorResponse } from "../../../../lib/api/errors";
-import { ORG_ROLES } from "../../../../lib/domain-enums";
-import { generateSecureToken, hashToken } from "../../../../lib/security/encryption";
-import { sendEmail, inviteEmail } from "../../../../lib/email/send";
-import { checkRateLimitSafe } from "../../../../lib/security/rate-limit";
-import { logAuditEvent } from "../../../../lib/api/audit";
+import { prisma } from "../../../lib/db";
+import { requireRole } from "../../../lib/api/auth";
+import { badRequest, forbidden, errorResponse } from "../../../lib/api/errors";
+import { ORG_ROLES } from "../../../lib/domain-enums";
+import { generateSecureToken, hashToken } from "../../../lib/security/encryption";
+import { sendEmail, inviteEmail } from "../../../lib/email/send";
+import { checkRateLimitSafe } from "../../../lib/security/rate-limit";
+import { logAuditEvent } from "../../../lib/api/audit";
 
 const inviteSchema = z.object({
   name: z.string().min(1).max(200),

@@ -1,16 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "../../../../../lib/db";
-import { requirePositionAccess } from "../../../../../lib/api/position-access";
-import { teamInviteSchema } from "../../../../../lib/api/validation";
-import { badRequest, forbidden, errorResponse } from "../../../../../lib/api/errors";
+import { prisma } from "../../../lib/db";
+import { requirePositionAccess } from "../../../lib/api/position-access";
+import { teamInviteSchema } from "../../../lib/api/validation";
+import { badRequest, forbidden, errorResponse } from "../../../lib/api/errors";
 
-// NOTE ON VERIFICATION: touches prisma.positionTeam/prisma.user,
-// unverified in this sandbox — see prisma-repository.ts's caveat.
-//
-// §3.8/3.9: this only ASSIGNS an existing org member (by email) to a
-// position's team — the org roster (see /api/team) is the source of truth
-// for who's in the organization at all. Someone not yet in the org needs
-// to go through POST /api/team/invite first.
+
 
 export async function GET(
   req: NextRequest,

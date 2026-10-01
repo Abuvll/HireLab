@@ -4,14 +4,6 @@ import { requirePositionAccess } from "../../../../../lib/api/position-access";
 import { updatePositionStatusSchema } from "../../../../../lib/api/validation";
 import { badRequest, forbidden, errorResponse } from "../../../../../lib/api/errors";
 
-// NOTE ON VERIFICATION: touches prisma.position, unverified in this
-// sandbox — see prisma-repository.ts's caveat.
-//
-// Split out from the general PATCH /api/positions/[id] edit endpoint
-// because the dashboard's position-actions menu (Pause / Reopen / Close)
-// is a distinct, single-purpose action separate from editing the listing
-// content — same split the frontend itself makes (renderPositionActionsMenu
-// calls API.setPositionStatus, the edit form calls API.updatePosition).
 
 export async function PATCH(
   req: NextRequest,

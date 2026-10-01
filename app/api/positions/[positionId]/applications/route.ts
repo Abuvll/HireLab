@@ -7,18 +7,6 @@ import { badRequest, errorResponse } from "../../../../../lib/api/errors";
 import { deriveApplicationStatus } from "../../../../../lib/domain-enums";
 import type { GithubAnalysisData } from "../../../../../lib/scoring/types";
 
-// NOTE ON VERIFICATION: touches prisma.application, unverified in this
-// sandbox — see prisma-repository.ts's caveat. The actual ranking,
-// filtering, and percentile logic this route calls into
-// (buildRankedList) is fully unit tested — see
-// lib/__tests__/ranked-list.test.ts. This route is just: fetch, shape,
-// delegate, return.
-//
-// Only gate-qualified (meetsRequirements=true) applications are ranked
-// here, same as before the redesign — this endpoint answers "who's in the
-// running for this position", not "every application regardless of status".
-// The org-wide Processing/Reviewed/Qualified funnel lives in /api/overview
-// instead, which does need the full, ungated application set.
 
 export async function GET(
   req: NextRequest,

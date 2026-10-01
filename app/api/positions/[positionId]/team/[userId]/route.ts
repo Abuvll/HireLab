@@ -3,8 +3,6 @@ import { prisma } from "../../../../../../lib/db";
 import { requirePositionAccess } from "../../../../../../lib/api/position-access";
 import { forbidden, errorResponse } from "../../../../../../lib/api/errors";
 
-// NOTE ON VERIFICATION: touches prisma.positionTeam, unverified in
-// this sandbox — see prisma-repository.ts's caveat.
 
 export async function DELETE(
   req: NextRequest,
