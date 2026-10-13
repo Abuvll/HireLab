@@ -101,59 +101,7 @@ npm start               # the web app
 npm run worker          # in a separate terminal — without this, applications stay queued and never get scored
                         # (an application saved while Redis was down is queued later with `npm run requeue`)
 ```
-
-## Project Structure
-
-```
-hirelab/
-├── app/
-│   ├── api/              # The backend — one route.ts per endpoint (auth, positions, applications, team, ...)
-│   ├── apply/[positionId] # Redirects /apply/:id to /apply.html?position=:id
-│   └── page.tsx           # Redirects the bare domain to /index.html
-├── public/
-│   ├── index.html          # Landing page + sign-up/login dialog (uses /api/auth/*)
-│   ├── dashboard.html      # The authenticated app (single page, no build step)
-│   ├── reset-password.html # Where the password-reset e-mail links to
-│   ├── accept-invite.html  # Where the team-invite e-mail links to
-│   └── apply.html          # Public candidate application form (uses /api/apply/*; PDF or DOCX resume)
-├── lib/
-│   ├── api/               # Request validation, auth/session checks, response shaping shared across routes
-│   ├── auth/               # Password hashing, session cookies
-│   ├── db-adapters/        # Prisma-backed implementation of the analysis pipeline's repository interface
-│   ├── extraction/         # LLM client (LiteLLM) and resume-extraction prompt/schema
-│   ├── github/              # GitHub API client and profile analysis (languages, commits, shipped projects)
-│   ├── jobs/                # Background job queue, worker process, and the analysis pipeline itself
-│   ├── parsing/              # PDF/DOCX resume text extraction
-│   ├── scoring/              # Evidence matrix, subscores, and ranking logic (no AI involved — deterministic)
-│   ├── security/             # Encryption, rate limiting, file-type checks, virus scanning, CAPTCHA
-│   ├── storage/               # File upload storage (local disk, or fetch-based for remote files)
-│   └── __tests__/             # Vitest unit tests, mirroring the structure above
-├── prisma/schema.prisma    # The full data model (organizations, users, positions, applications, scores, interviews, ...)
-├── docs/API.md             # Every endpoint the dashboard uses, with roles and shapes
-├── CHANGELOG.md
-├── scripts/start-worker.ts # Entry point for `npm run worker`
-├── scripts/requeue-processing.ts # `npm run requeue`: queue applications that were saved but never queued
-├── docker-compose.yml      # Postgres, Redis, and LiteLLM Proxy for local development
-├── .env.example
-├── package.json
-└── README.md
-```
-
-`app/api` and `lib/jobs` are the two places that matter most if you're extending how an application gets processed: routes in `app/api` handle the request/response cycle, while `lib/jobs/analyze-application.ts` is the actual pipeline a queued application goes through.
-
-## Production
-
-Step-by-step deployment for any host (Docker Compose server, PaaS, container platform, plain Linux server): A ready-made single-server stack is in `deploy/`. In short, what a production deployment needs, on any host:
-
-- **Two processes** from the same code: the web app (`npm start`, or the `runner` Docker target) and the background worker (`npm run worker`, or the `worker` target). The worker needs `tsx`, which is a dev dependency — don't prune dev dependencies on the host that runs it.
-- **PostgreSQL and Redis.** Apply the database schema with `npm run db:deploy` (`prisma migrate deploy`) before starting a new version. With Docker: `docker build --target migrate -t hirelab-migrate .` then run that image with `DATABASE_URL` set. For TLS-only providers use `?sslmode=require` in `DATABASE_URL` and `rediss://` in `REDIS_URL`.
-- **Environment variables** — see `.env.example` (each one is documented there). In production `SESSION_SECRET` must be at least 32 characters, `NEXT_PUBLIC_APP_URL` must be the real public `https://` address, and `WORKER_INTERNAL_SECRET` is needed for the worker to download resumes. Leave `TURNSTILE_SECRET_KEY` empty unless the apply form renders a CAPTCHA widget, and leave `UPLOAD_REQUIRE_VIRUS_SCAN` at `false` unless ClamAV is running.
-- **Health checks.** `GET /api/health` is a liveness probe (no dependencies touched); `GET /api/health/ready` checks PostgreSQL and Redis and returns 503 if either is down.
-- **Uploaded resumes.** `STORAGE_DRIVER=local` (default) keeps them on disk in `UPLOADS_DIR` (`/data/uploads` in the Docker image) — only safe on a persistent disk or volume. On any host with an ephemeral filesystem, or when you run several web instances, set `STORAGE_DRIVER=s3` and the `S3_*` variables to use any S3-compatible object store (AWS S3, Cloudflare R2, Backblaze B2, MinIO, DigitalOcean Spaces, ...). Check the setup with `npm run storage:check`. To try it locally: `docker compose --profile s3 up -d minio minio-init`, then use the MinIO values listed in `docker-compose.yml`.
-- **Docker.** `docker build .` builds the web server (the default, last target). The image listens on `PORT` (3000) on all interfaces and runs as a non-root user.
-- **Schema changes** need a migration (`npm run db:migrate -- --name <change>`); a test fails if `prisma/schema.prisma` and `prisma/migrations` drift apart. For an exact comparison against a scratch database, run `SHADOW_DATABASE_URL=<empty scratch postgres> npm run db:check-migrations`.
-- **One command to verify a checkout** (needs the Postgres from `docker compose up -d postgres redis` and a `.env`): `npm run verify` — generates the Prisma client, type-checks, runs the tests and builds.
-
+ 
 ## Development
 
 Start the development server:
