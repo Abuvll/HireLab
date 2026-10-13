@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, afterEach, vi } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromRequest, setSessionCookie, clearSessionCookie } from "../auth/cookies";
 
@@ -63,5 +63,73 @@ describe("session cookie round-trip", () => {
     const session = await getSessionFromRequest(req);
     expect(session).toBeNull();
     expect(token).not.toBe(clearedValue); // sanity: it actually changed
+  });
+});
+
+describe("session cookie hardening", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("clearSessionCookie uses the same attributes as the cookie it removes, with maxAge 0", () => {
+    const res = NextResponse.json({ ok: true });
+    clearSessionCookie(res);
+    const cookie = res.cookies.get("hirelab_session");
+    expect(cookie?.value).toBe("");
+    expect(cookie?.httpOnly).toBe(true);
+    expect(cookie?.sameSite).toBe("lax");
+    expect(cookie?.path).toBe("/");
+    expect(cookie?.maxAge).toBe(0);
+  });
+
+  it("marks the cookie Secure in production", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const res = NextResponse.json({ ok: true });
+    await setSessionCookie(res, payload);
+    expect(res.cookies.get("hirelab_session")?.secure).toBe(true);
+  });
+
+  it("refuses a SESSION_SECRET shorter than 32 characters in production", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("SESSION_SECRET", "too-short");
+    const res = NextResponse.json({ ok: true });
+    await expect(setSessionCookie(res, payload)).rejects.toThrow(/at least 32 characters/);
+  });
+
+  it("still accepts a short SESSION_SECRET outside production (local dev / tests)", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("SESSION_SECRET", "short-dev-secret");
+    const res = NextResponse.json({ ok: true });
+    await expect(setSessionCookie(res, payload)).resolves.toBeUndefined();
+  });
+});
+
+describe("'Remember me' cookie lifetime", () => {
+  it("remember: true (and the default) sets a 7-day persistent cookie", async () => {
+    for (const options of [{ remember: true }, undefined]) {
+      const res = NextResponse.json({ ok: true });
+      await setSessionCookie(res, payload, options);
+      expect(res.cookies.get("hirelab_session")?.maxAge).toBe(60 * 60 * 24 * 7);
+    }
+  });
+
+  it("remember: false sets a browser-session cookie: no Max-Age / Expires, so it goes when the browser closes", async () => {
+    const res = NextResponse.json({ ok: true });
+    await setSessionCookie(res, payload, { remember: false });
+    const cookie = res.cookies.get("hirelab_session");
+    expect(cookie?.value).toBeTruthy();
+    expect(cookie?.maxAge).toBeUndefined();
+    expect(cookie?.expires).toBeUndefined();
+    expect(cookie?.httpOnly).toBe(true);
+    expect(res.headers.get("set-cookie")).not.toMatch(/max-age/i);
+  });
+
+  it("a session-only cookie still authenticates the request", async () => {
+    const res = NextResponse.json({ ok: true });
+    await setSessionCookie(res, payload, { remember: false });
+    const req = new NextRequest("https://example.com/api/positions", {
+      headers: { cookie: `hirelab_session=${res.cookies.get("hirelab_session")?.value}` },
+    });
+    expect(await getSessionFromRequest(req)).toEqual(payload);
   });
 });

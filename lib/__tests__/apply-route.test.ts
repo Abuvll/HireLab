@@ -52,7 +52,7 @@ const validBody = (email: string) => ({
   fullName: "Jamie Applicant",
   contactMethod: "EMAIL",
   email,
-  resumeUrl: "https://example.com/resume.pdf",
+  resumeUrl: "https://example.com/api/uploads/5b1e0c52-8c0e-4c1a-9a53-0f3d7a2f6b11.pdf", // what POST /api/apply/:id/upload hands back
   coverLetterText: "I've spent the last three years building things I'm proud of.",
   githubUrl: "https://github.com/jamie",
 });
@@ -104,6 +104,26 @@ describe("POST /api/apply/:positionId — resilience to a failed job-queue enque
     const res = await applyRoute(applyRequest(positionId, { ...validBody("bad@example.com"), coverLetterText: "short" }), { params: { positionId } });
 
     expect(res.status).toBe(400);
+    expect(enqueueAnalysis).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /api/apply/:positionId — resume URL must be one our upload endpoint issued", () => {
+  it.each([
+    ["an external host", "https://evil.example.net/api/uploads/5b1e0c52-8c0e-4c1a-9a53-0f3d7a2f6b11.pdf"],
+    ["an internal address", "http://169.254.169.254/latest/meta-data/"],
+    ["another endpoint of this app", "https://example.com/api/auth/logout"],
+    ["a non-uploads path", "https://example.com/resume.pdf"],
+    ["an uploads URL with a query string", "https://example.com/api/uploads/5b1e0c52-8c0e-4c1a-9a53-0f3d7a2f6b11.pdf?x=1"],
+    ["a javascript: URL", "javascript:alert(1)"],
+  ])("rejects %s with a 400 on the resumeUrl field and does not enqueue", async (_label, resumeUrl) => {
+    const positionId = `pos-resume-${Math.random().toString(36).slice(2, 8)}`;
+    await seedOpenPosition(positionId);
+
+    const res = await applyRoute(applyRequest(positionId, { ...validBody("resume-check@example.com"), resumeUrl }), { params: { positionId } });
+
+    expect(res.status).toBe(400);
+    expect((await res.json()).fields?.resumeUrl).toBeDefined();
     expect(enqueueAnalysis).not.toHaveBeenCalled();
   });
 });

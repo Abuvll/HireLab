@@ -6,7 +6,14 @@ import { badRequest, errorResponse } from "../../../lib/api/errors";
 
 const updateOrgSchema = z.object({
   name: z.string().min(1).max(200).optional(),
-  website: z.string().url().max(300).nullable().optional(),
+  // http(s) only: z.string().url() alone also accepts javascript:, data: and other schemes, and this value is rendered as a link.
+  website: z
+    .string()
+    .url()
+    .max(300)
+    .refine((v) => /^https?:\/\//i.test(v), { message: "Website must start with http:// or https://" })
+    .nullable()
+    .optional(),
   industry: z.string().max(200).nullable().optional(),
   description: z.string().max(2000).nullable().optional(),
   contactEmail: z.string().email().nullable().optional(),

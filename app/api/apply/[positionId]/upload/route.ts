@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { saveLocalFile, InvalidUploadError } from "../../../../../lib/storage/local-storage";
+import { saveUpload, InvalidUploadError } from "../../../../../lib/storage";
 import { badRequest, errorResponse } from "../../../../../lib/api/errors";
 import { detectFileType } from "../../../../../lib/security/file-type";
 import { scanBuffer, isVirusScanConfigured } from "../../../../../lib/security/virus-scan";
 import { checkRateLimitSafe, getClientIp } from "../../../../../lib/security/rate-limit";
+import { getPublicBaseUrl } from "../../../../../lib/api/urls";
 
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; 
@@ -46,13 +47,15 @@ export async function POST(
 
     let storedFilename: string;
     try {
-      storedFilename = await saveLocalFile(buffer, file.name);
+      storedFilename = await saveUpload(buffer, file.name);
     } catch (err) {
       if (err instanceof InvalidUploadError) throw badRequest(err.message);
       throw err;
     }
 
-    const url = new URL(`/api/uploads/${storedFilename}`, req.nextUrl.origin).toString();
+    // Built from the public base URL (NEXT_PUBLIC_APP_URL): the worker later downloads the resume from this URL and
+    // only sends its internal token when the URL's origin matches NEXT_PUBLIC_APP_URL (see FetchFileStorage).
+    const url = `${getPublicBaseUrl(req.nextUrl.origin)}/api/uploads/${storedFilename}`;
     return NextResponse.json({ url }, { status: 201 });
   } catch (err) {
     return errorResponse(err);

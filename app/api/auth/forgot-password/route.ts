@@ -5,6 +5,7 @@ import { generateSecureToken, hashToken } from "../../../../lib/security/encrypt
 import { sendEmail, passwordResetEmail } from "../../../../lib/email/send";
 import { checkRateLimitSafe, getClientIp } from "../../../../lib/security/rate-limit";
 import { badRequest, errorResponse } from "../../../../lib/api/errors";
+import { getPublicBaseUrl } from "../../../../lib/api/urls";
 
 const RESET_TOKEN_EXPIRY_MINUTES = 30;
 
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      const resetUrl = `${(process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin).replace(/\/$/, "")}/reset-password?token=${rawToken}`;
+      const resetUrl = `${getPublicBaseUrl(req.nextUrl.origin)}/reset-password?token=${rawToken}`;
       await sendEmail(passwordResetEmail({ to: user.email, resetUrl }));
     }
 

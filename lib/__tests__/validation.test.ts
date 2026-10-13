@@ -23,6 +23,16 @@ describe("loginSchema", () => {
   it("rejects an empty password", () => {
     expect(loginSchema.safeParse({ email: "a@b.com", password: "" }).success).toBe(false);
   });
+  it("accepts the 'Remember me' flag (true or false) and keeps working without it", () => {
+    expect(loginSchema.safeParse({ email: "a@b.com", password: "x", remember: false }).success).toBe(true);
+    const r = loginSchema.safeParse({ email: "a@b.com", password: "x", remember: true });
+    expect(r.success && r.data.remember).toBe(true);
+    const none = loginSchema.safeParse({ email: "a@b.com", password: "x" });
+    expect(none.success && none.data.remember).toBeUndefined();
+  });
+  it("rejects a non-boolean remember flag", () => {
+    expect(loginSchema.safeParse({ email: "a@b.com", password: "x", remember: "yes" }).success).toBe(false);
+  });
 });
 
 describe("signupSchema", () => {
@@ -50,6 +60,24 @@ describe("signupSchema", () => {
 
   it("rejects an invalid email", () => {
     expect(signupSchema.safeParse({ ...validSignup, email: "not-an-email" }).success).toBe(false);
+  });
+
+  it("reports problems as plain sentences the sign-up page can show as they are", () => {
+    const msg = (input: unknown) => {
+      const r = signupSchema.safeParse(input);
+      return r.success ? null : r.error.issues[0].message;
+    };
+    expect(msg({ ...validSignup, password: "short" })).toBe("Use at least 8 characters for your password.");
+    expect(msg({ ...validSignup, email: "nope" })).toBe("Enter a valid email address.");
+    expect(msg({ ...validSignup, name: "   " })).toBe("Enter your name.");
+    expect(msg({ ...validSignup, password: undefined })).toBe("Choose a password.");
+    expect(msg({ ...validSignup, email: undefined })).toBe("Enter your email address.");
+  });
+
+  it("trims the name and the email", () => {
+    const r = signupSchema.safeParse({ ...validSignup, name: "  Jordan Lee ", email: " jordan@acme.com " });
+    expect(r.success).toBe(true);
+    if (r.success) expect([r.data.name, r.data.email]).toEqual(["Jordan Lee", "jordan@acme.com"]);
   });
 });
 
@@ -116,6 +144,75 @@ describe("applySchema", () => {
     const { githubUrl, ...rest } = validApplyBase;
     const result = applySchema.safeParse({ ...rest, contactMethod: "EMAIL", email: "m@x.com" });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("applySchema — the public apply page's rules", () => {
+  const ok = { ...validApplyBase, contactMethod: "EMAIL", email: "m@x.com" };
+  const issue = (over: Record<string, unknown>) => {
+    const r = applySchema.safeParse({ ...ok, ...over });
+    return r.success ? null : { field: String(r.error.issues[0].path[0]), message: r.error.issues[0].message };
+  };
+
+  it("accepts every GitHub profile link shape a candidate is likely to paste", () => {
+    for (const githubUrl of [
+      "https://github.com/octocat",
+      "https://github.com/octocat/",
+      "http://github.com/octocat",
+      "https://www.github.com/octocat",
+      "https://GitHub.com/octocat?tab=repositories",
+      "https://github.com/octocat/hello-world",
+      "https://github.com/a-b-c",
+    ]) expect(applySchema.safeParse({ ...ok, githubUrl }).success, githubUrl).toBe(true);
+  });
+
+  it("refuses links that aren't a GitHub profile, because the analysis can't fetch anything from them", () => {
+    for (const githubUrl of [
+      "https://gitlab.com/someone",
+      "https://github.com",
+      "https://github.com/",
+      "https://github.com/-bad",
+      "https://github.com/has space",
+      "https://notgithub.com/octocat",
+      "https://github.com.evil.example/octocat",
+      "https://evil.example/github.com/octocat",
+      "ftp://github.com/octocat",
+      "javascript:alert(1)",
+      "octocat",
+      "github.com/octocat", // the page adds https:// before sending; the API itself wants a full URL
+    ]) expect(issue({ githubUrl })?.field, githubUrl).toBe("githubUrl");
+    expect(issue({ githubUrl: "https://gitlab.com/someone" })?.message).toMatch(/GitHub profile/);
+  });
+
+  it("only takes http(s) links for the resume and the personal site (no javascript:/data: URLs get stored)", () => {
+    expect(issue({ personalSiteUrl: "javascript:alert(1)" })?.field).toBe("personalSiteUrl");
+    expect(issue({ personalSiteUrl: "data:text/html,<script>1</script>" })?.field).toBe("personalSiteUrl");
+    expect(issue({ resumeUrl: "javascript:alert(1)" })?.field).toBe("resumeUrl");
+    expect(applySchema.safeParse({ ...ok, personalSiteUrl: "https://yoursite.dev/me" }).success).toBe(true);
+  });
+
+  it("bounds the cover letter to 21–10,000 characters after trimming, with messages a candidate can act on", () => {
+    expect(issue({ coverLetterText: "x".repeat(20) })?.message).toMatch(/at least 21 characters/);
+    expect(issue({ coverLetterText: "   " + "x".repeat(18) + "   " })?.field).toBe("coverLetterText");
+    expect(applySchema.safeParse({ ...ok, coverLetterText: "x".repeat(21) }).success).toBe(true);
+    expect(applySchema.safeParse({ ...ok, coverLetterText: "x".repeat(10000) }).success).toBe(true);
+    expect(issue({ coverLetterText: "x".repeat(10001) })?.message).toMatch(/too long/);
+  });
+
+  it("says what to do for each missing or bad field", () => {
+    expect(issue({ fullName: "   " })).toEqual({ field: "fullName", message: "Enter your full name." });
+    expect(issue({ email: "nope" })).toEqual({ field: "email", message: "Enter a valid email address." });
+    expect(issue({ resumeUrl: "nope" })).toEqual({ field: "resumeUrl", message: "Upload your resume first." });
+    expect(issue({ githubUrl: undefined })).toEqual({ field: "githubUrl", message: "Enter your GitHub profile link." });
+    expect(issue({ contactMethod: "FAX" })?.message).toMatch(/email or phone/);
+    expect(issue({ email: undefined })?.field).toBe("email");
+    expect(issue({ contactMethod: "PHONE", phone: undefined })?.message).toMatch(/phone number/);
+  });
+
+  it("trims what it stores", () => {
+    const r = applySchema.safeParse({ ...ok, fullName: "  Maren Ito ", email: " m@x.com ", githubUrl: " https://github.com/mareni " });
+    expect(r.success).toBe(true);
+    if (r.success) expect([r.data.fullName, r.data.email, r.data.githubUrl]).toEqual(["Maren Ito", "m@x.com", "https://github.com/mareni"]);
   });
 });
 
@@ -306,6 +403,14 @@ describe("createPositionSchema", () => {
   it("rejects a missing description", () => {
     const { description, ...rest } = validPositionBase;
     expect(createPositionSchema.safeParse(rest).success).toBe(false);
+  });
+
+  it("accepts an optional starting status and rejects unknown ones", () => {
+    for (const status of ["OPEN", "PAUSED", "CLOSED"]) {
+      const r = createPositionSchema.safeParse({ ...validPositionBase, endDate: "2026-12-31", status });
+      expect(r.success).toBe(true);
+    }
+    expect(createPositionSchema.safeParse({ ...validPositionBase, endDate: "2026-12-31", status: "DRAFT" }).success).toBe(false);
   });
 });
 

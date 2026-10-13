@@ -11,6 +11,8 @@ type ApplicationRow = {
   email: string | null;
   createdAt: Date;
   status: "PROCESSING" | "READY" | "FAILED";
+  stage?: "SHORTLISTED" | "INTERVIEW" | "HIRED" | null;
+  hiredAt?: Date | null;
   score: {
     meetsRequirements: boolean;
     matchPct: number;
@@ -30,7 +32,7 @@ function hasShippedProject(githubAnalysis: unknown | null): boolean {
 
 type PositionRow = { id: string; [key: string]: unknown };
 
-function computePositionsWithStats(positionRows: PositionRow[], rows: ApplicationRow[], requestOrigin: string) {
+export function computePositionsWithStats(positionRows: PositionRow[], rows: ApplicationRow[], requestOrigin: string) {
   return positionRows.map((p) => {
     const rowsForPosition = rows.filter((r) => r.positionId === p.id);
     const qualifiedRows = rowsForPosition.filter((r) => r.score?.meetsRequirements);
@@ -85,7 +87,14 @@ export async function buildPositionsSummary(organizationId: string, requestOrigi
 }
 
 
-export async function buildOverviewData(organizationId: string, requestOrigin: string) {
+/**
+ * The overview payload: positions with their stats, and every position's applications.
+ *
+ * `viewerUserId` (the signed-in person) adds `readApplicationIds`: the applications whose "new applicant" notification this
+ * person has already read (POST /api/notifications/:id/read, /read-all), so the bell's unread count survives a reload and
+ * follows them to another device.
+ */
+export async function buildOverviewData(organizationId: string, requestOrigin: string, viewerUserId?: string) {
   const positions = await prisma.position.findMany({
     where: { organizationId },
     orderBy: { createdAt: "desc" },
@@ -153,11 +162,22 @@ export async function buildOverviewData(organizationId: string, requestOrigin: s
         standoutLine: standoutByApplicationId.get(r.id) ?? "",
         hasShippedProject: hasShippedProject(r.githubAnalysis),
         status: deriveApplicationStatus(r.status, r.score?.meetsRequirements),
+        stage: r.stage ?? null,
+        hiredAt: r.hiredAt ?? null,
       };
     });
   }
 
   const positionsOut = computePositionsWithStats(positionRows, rows, requestOrigin);
 
-  return { positions: positionsOut, applications: applicationsByPosition };
+  let readApplicationIds: string[] = [];
+  if (viewerUserId && rows.length > 0) {
+    const reads = await prisma.notificationRead.findMany({
+      where: { userId: viewerUserId, applicationId: { in: rows.map((r) => r.id) } },
+      select: { applicationId: true },
+    });
+    readApplicationIds = reads.map((r) => r.applicationId);
+  }
+
+  return { positions: positionsOut, applications: applicationsByPosition, readApplicationIds };
 }

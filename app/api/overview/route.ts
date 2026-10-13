@@ -6,7 +6,7 @@ import { errorResponse } from "../../../lib/api/errors";
 export async function GET(req: NextRequest) {
   try {
     const session = await requireAuth(req);
-    const data = await buildOverviewData(session.organizationId, req.nextUrl.origin);
+    const data = await buildOverviewData(session.organizationId, req.nextUrl.origin, session.userId);
     return NextResponse.json(data);
   } catch (err) {
     return errorResponse(err);

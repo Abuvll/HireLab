@@ -30,11 +30,15 @@ export async function POST(req: NextRequest) {
     const res = NextResponse.json({
       user: { id: user.id, name: user.name, email: user.email, orgRole: user.orgRole },
     });
-    await setSessionCookie(res, {
-      userId: user.id,
-      organizationId: user.organizationId,
-      orgRole: user.orgRole,
-    });
+    await setSessionCookie(
+      res,
+      {
+        userId: user.id,
+        organizationId: user.organizationId,
+        orgRole: user.orgRole,
+      },
+      { remember: parsed.data.remember }
+    );
     return res;
   } catch (err) {
     return errorResponse(err);

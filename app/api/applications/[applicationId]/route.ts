@@ -72,6 +72,8 @@ export async function GET(
         status: application.status,
         resumeUrl: application.resumeUrl,
         portfolioUrl: application.personalSiteUrl,
+        stage: application.stage,
+        hiredAt: application.hiredAt,
       },
       application.resumeExtract as unknown as ResumeExtractData,
       application.githubAnalysis as unknown as GithubAnalysisData,

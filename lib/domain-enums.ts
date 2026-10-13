@@ -17,6 +17,15 @@ export type ContactMethod = (typeof CONTACT_METHODS)[number];
 export const EMPLOYMENT_TYPES = ["FULL_TIME", "PART_TIME", "CONTRACT", "HYBRID"] as const;
 export type EmploymentType = (typeof EMPLOYMENT_TYPES)[number];
 
+export const APPLICATION_STAGES = ["SHORTLISTED", "INTERVIEW", "HIRED"] as const;
+export type ApplicationStage = (typeof APPLICATION_STAGES)[number];
+
+export const INTERVIEW_TYPES = ["SCREENING", "TECHNICAL", "FINAL_ROUND", "HIRING_REVIEW"] as const;
+export type InterviewType = (typeof INTERVIEW_TYPES)[number];
+
+export const INTERVIEW_STATUSES = ["SCHEDULED", "COMPLETED", "CANCELED"] as const;
+export type InterviewStatus = (typeof INTERVIEW_STATUSES)[number];
+
 export const LLM_PROVIDERS = ["ANTHROPIC", "OPENAI", "GEMINI", "MISTRAL", "XAI"] as const;
 export type LlmProvider = (typeof LLM_PROVIDERS)[number];
 

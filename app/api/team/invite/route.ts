@@ -8,6 +8,7 @@ import { generateSecureToken, hashToken } from "../../../../lib/security/encrypt
 import { sendEmail, inviteEmail } from "../../../../lib/email/send";
 import { checkRateLimitSafe } from "../../../../lib/security/rate-limit";
 import { logAuditEvent } from "../../../../lib/api/audit";
+import { getPublicBaseUrl } from "../../../../lib/api/urls";
 
 const inviteSchema = z.object({
   name: z.string().min(1).max(200),
@@ -64,7 +65,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    const acceptUrl = `${(process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin).replace(/\/$/, "")}/accept-invite?token=${rawToken}`;
+    const acceptUrl = `${getPublicBaseUrl(req.nextUrl.origin)}/accept-invite?token=${rawToken}`;
     await sendEmail(
       inviteEmail({
         to: parsed.data.email,

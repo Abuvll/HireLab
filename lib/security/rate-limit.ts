@@ -1,12 +1,11 @@
-import Redis from "ioredis";
+import type Redis from "ioredis";
+import { createRedisConnection } from "./redis-connection";
 
 let client: Redis | null = null;
 
 function getClient(): Redis {
   if (!client) {
-    const url = process.env.REDIS_URL;
-    if (!url) throw new Error("REDIS_URL is not set");
-    client = new Redis(url, { maxRetriesPerRequest: 2 });
+    client = createRedisConnection({ maxRetriesPerRequest: 2 });
   }
   return client;
 }

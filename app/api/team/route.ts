@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "../../../lib/db";
-import { requireRole } from "../../../lib/api/auth";
+import { requireAuth, requireRole } from "../../../lib/api/auth";
 import { badRequest, forbidden, errorResponse } from "../../../lib/api/errors";
 import { ORG_ROLES } from "../../../lib/domain-enums";
 import { generateSecureToken, hashToken } from "../../../lib/security/encryption";
 import { sendEmail, inviteEmail } from "../../../lib/email/send";
 import { checkRateLimitSafe } from "../../../lib/security/rate-limit";
 import { logAuditEvent } from "../../../lib/api/audit";
+import { getPublicBaseUrl } from "../../../lib/api/urls";
 
 const inviteSchema = z.object({
   name: z.string().min(1).max(200),
@@ -16,6 +17,42 @@ const inviteSchema = z.object({
 });
 
 const INVITE_EXPIRY_DAYS = 7;
+
+/**
+ * GET /api/team -> the organization roster for Settings > Team: every member (any role may read it) plus the invites that
+ * are still open (not accepted, not expired). `userId` is the key DELETE /api/team/:userId takes; `inviteId` the one
+ * DELETE /api/team/invite/:inviteId takes.
+ */
+export async function GET(req: NextRequest) {
+  try {
+    const session = await requireAuth(req);
+    const [users, invites] = await Promise.all([
+      prisma.user.findMany({
+        where: { organizationId: session.organizationId },
+        select: { id: true, name: true, email: true, orgRole: true },
+        orderBy: { createdAt: "asc" },
+      }),
+      prisma.pendingInvite.findMany({
+        where: { organizationId: session.organizationId, acceptedAt: null, expiresAt: { gt: new Date() } },
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
+    return NextResponse.json({
+      members: users.map((u) => ({ userId: u.id, name: u.name, email: u.email, role: u.orgRole })),
+      pendingInvites: invites.map((i) => ({
+        inviteId: i.id,
+        name: i.name,
+        email: i.email,
+        role: i.role,
+        invitedAt: i.createdAt,
+        expiresAt: i.expiresAt,
+        status: "pending",
+      })),
+    });
+  } catch (err) {
+    return errorResponse(err);
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -65,7 +102,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    const acceptUrl = `${(process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin).replace(/\/$/, "")}/accept-invite?token=${rawToken}`;
+    const acceptUrl = `${getPublicBaseUrl(req.nextUrl.origin)}/accept-invite?token=${rawToken}`;
     await sendEmail(
       inviteEmail({
         to: parsed.data.email,

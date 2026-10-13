@@ -2,6 +2,15 @@
 const nextConfig = {
   output: "standalone",
 
+  async rewrites() {
+    return [
+      { source: "/", destination: "/index.html" },
+      { source: "/dashboard", destination: "/dashboard.html" },
+      { source: "/reset-password", destination: "/reset-password.html" },
+      { source: "/accept-invite", destination: "/accept-invite.html" },
+    ];
+  },
+
   async headers() {
     return [
       {

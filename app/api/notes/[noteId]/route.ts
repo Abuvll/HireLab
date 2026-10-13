@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { prisma } from "../../../../lib/db";
 import { requireAuth } from "../../../../lib/api/auth";
+import { updateNoteSchema } from "../../../../lib/api/validation";
+import { canDeleteNote, canEditNoteText, canPinNotes, serializeNote } from "../../../../lib/api/notes";
 import { badRequest, forbidden, notFound, errorResponse } from "../../../../lib/api/errors";
-
-const updateNoteSchema = z.object({ text: z.string().trim().min(1).max(5000) });
 
 async function loadNoteScopedToOrg(noteId: string, organizationId: string) {
   const note = await prisma.candidateNote.findUnique({
@@ -15,57 +14,61 @@ async function loadNoteScopedToOrg(noteId: string, organizationId: string) {
   return note;
 }
 
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: { noteId: string } }
-) {
+/**
+ * PATCH /api/notes/:id  { text? , pinned? } -> the updated note.
+ *   text    editing is for the note's author only; it stamps `editedAt`.
+ *   pinned  anyone who can write notes (everyone but Viewers) may pin / unpin; it is not an edit, so `editedAt` is untouched.
+ */
+export async function PATCH(req: NextRequest, { params }: { params: { noteId: string } }) {
   try {
     const session = await requireAuth(req);
 
     const note = await loadNoteScopedToOrg(params.noteId, session.organizationId);
     if (!note) throw notFound("Note not found");
 
-    if (note.authorId !== session.userId) {
-      throw forbidden("You can only edit your own notes");
-    }
-
     const body = await req.json().catch(() => null);
     const parsed = updateNoteSchema.safeParse(body);
     if (!parsed.success) throw badRequest(parsed.error.issues[0]?.message ?? "Invalid note");
+    const { text, pinned } = parsed.data;
+
+    if (text !== undefined && !canEditNoteText(note, session.userId)) {
+      throw forbidden("You can only edit your own notes");
+    }
+    if (pinned !== undefined && !canPinNotes(session.orgRole)) {
+      throw forbidden("Viewers can't pin notes");
+    }
+    // Only a top-level note is pinned: a reply is part of its thread.
+    if (pinned === true && note.parentId) {
+      throw badRequest("Replies can't be pinned. Pin the note they belong to.");
+    }
 
     const updated = await prisma.candidateNote.update({
       where: { id: params.noteId },
-      data: { text: parsed.data.text, editedAt: new Date() },
+      data: {
+        ...(text !== undefined && { text, editedAt: new Date() }),
+        ...(pinned !== undefined && { pinned }),
+      },
     });
 
-    return NextResponse.json({
-      id: updated.id,
-      applicationId: updated.applicationId,
-      authorId: updated.authorId,
-      authorName: updated.authorName,
-      authorRole: updated.authorRole,
-      text: updated.text,
-      createdAt: updated.createdAt,
-      editedAt: updated.editedAt,
-    });
+    return NextResponse.json(serializeNote(updated as never));
   } catch (err) {
     return errorResponse(err);
   }
 }
 
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { noteId: string } }
-) {
+/** DELETE /api/notes/:id -> { deleted: true }. The author, or an Owner / Admin. Deleting a note deletes its replies. */
+export async function DELETE(req: NextRequest, { params }: { params: { noteId: string } }) {
   try {
     const session = await requireAuth(req);
 
     const note = await loadNoteScopedToOrg(params.noteId, session.organizationId);
     if (!note) throw notFound("Note not found");
 
-    const canDelete = note.authorId === session.userId || ["OWNER", "ADMIN"].includes(session.orgRole);
-    if (!canDelete) throw forbidden("You can only delete your own notes");
+    if (!canDeleteNote(note, session.userId, session.orgRole)) {
+      throw forbidden("You can only delete your own notes");
+    }
 
+    // Replies go with it: `CandidateNote.parent` is `onDelete: Cascade`, so the database removes the whole thread.
     await prisma.candidateNote.delete({ where: { id: params.noteId } });
 
     return NextResponse.json({ deleted: true });

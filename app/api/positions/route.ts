@@ -1,62 +1,62 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../lib/db";
-import { requirePositionAccess } from "../../../lib/api/position-access";
-import { teamInviteSchema } from "../../../lib/api/validation";
-import { badRequest, forbidden, errorResponse } from "../../../lib/api/errors";
+import { requireAuth, requireRole } from "../../../lib/api/auth";
+import { buildPositionsSummary } from "../../../lib/api/overview";
+import { loadPositionDetail } from "../../../lib/api/position-detail";
+import { createPositionSchema, normalizeRequirementChips } from "../../../lib/api/validation";
+import { logAuditEvent } from "../../../lib/api/audit";
+import { badRequest, errorResponse } from "../../../lib/api/errors";
 
-
-
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { positionId: string } }
-) {
+/** GET /api/positions -> { positions } for the signed-in user's organization (with applyUrl, stats and funnel). */
+export async function GET(req: NextRequest) {
   try {
-    await requirePositionAccess(req, params.positionId);
-    const team = await prisma.positionTeam.findMany({
-      where: { positionId: params.positionId },
-      include: { user: { select: { id: true, name: true, email: true } } },
-    });
-    return NextResponse.json({ team });
+    const session = await requireAuth(req);
+    const { positions } = await buildPositionsSummary(session.organizationId, req.nextUrl.origin);
+    return NextResponse.json({ positions });
   } catch (err) {
     return errorResponse(err);
   }
 }
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: { positionId: string } }
-) {
+/** POST /api/positions (Owner / Admin) -> 201 { position }. `status` is optional and defaults to OPEN. */
+export async function POST(req: NextRequest) {
   try {
-    const { session } = await requirePositionAccess(req, params.positionId);
-    if (!["OWNER", "ADMIN"].includes(session.orgRole)) {
-      throw forbidden("Only an Owner or Admin can add team members");
-    }
+    const session = await requireRole(req, ["OWNER", "ADMIN"]);
 
     const body = await req.json().catch(() => null);
-    const parsed = teamInviteSchema.safeParse(body);
-    if (!parsed.success) throw badRequest(parsed.error.issues[0]?.message ?? "Invalid invite data");
+    const parsed = createPositionSchema.safeParse(body);
+    if (!parsed.success) throw badRequest(parsed.error.issues[0]?.message ?? "Invalid position data");
+    const d = parsed.data;
 
-    // Privilege escalation: an Admin can't hand out Owner (same rule as
-    // POST /api/team/invite).
-    if (parsed.data.role === "OWNER" && session.orgRole !== "OWNER") {
-      throw forbidden("Only an Owner can assign the Owner role");
-    }
-
-    const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
-    if (!user || user.organizationId !== session.organizationId) {
-      throw badRequest(
-        "No one in your organization has that email yet — invite them from Settings \u2192 Team first, then add them to this position."
-      );
-    }
-
-    const membership = await prisma.positionTeam.upsert({
-      where: { positionId_userId: { positionId: params.positionId, userId: user.id } },
-      create: { positionId: params.positionId, userId: user.id, role: parsed.data.role },
-      update: { role: parsed.data.role },
-      include: { user: { select: { id: true, name: true, email: true } } },
+    const created = await prisma.position.create({
+      data: {
+        organizationId: session.organizationId,
+        title: d.title,
+        location: d.location,
+        employmentType: d.employmentType,
+        description: d.description,
+        requirementChips: normalizeRequirementChips(d.requirementChips),
+        endDate: new Date(d.endDate),
+        salary: d.salary,
+        gender: d.gender,
+        vacancies: d.vacancies,
+        education: d.education,
+        experience: d.experience,
+        ...(d.status ? { status: d.status } : {}),
+      },
     });
 
-    return NextResponse.json({ membership }, { status: 201 });
+    await logAuditEvent({
+      organizationId: session.organizationId,
+      actorUserId: session.userId,
+      action: "position.created",
+      targetType: "Position",
+      targetId: created.id,
+      metadata: { title: created.title },
+    });
+
+    const position = await loadPositionDetail(created.id, req.nextUrl.origin);
+    return NextResponse.json({ position }, { status: 201 });
   } catch (err) {
     return errorResponse(err);
   }

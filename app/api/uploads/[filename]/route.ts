@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readLocalFile, mimeTypeForExtension, FileNotFoundError, InvalidUploadError } from "../../../../lib/storage/local-storage";
+import { readUpload, mimeTypeForExtension, FileNotFoundError, InvalidUploadError } from "../../../../lib/storage";
 import { requireAuth } from "../../../../lib/api/auth";
 import { ApiError, errorResponse, badRequest, notFound, unauthorized } from "../../../../lib/api/errors";
 
@@ -26,7 +26,7 @@ export async function GET(
 
     let buffer: Buffer;
     try {
-      buffer = await readLocalFile(params.filename);
+      buffer = await readUpload(params.filename);
     } catch (err) {
       if (err instanceof FileNotFoundError) throw notFound("File not found");
       if (err instanceof InvalidUploadError) throw badRequest(err.message);

@@ -32,6 +32,8 @@ export async function GET(
       email: string | null;
       createdAt: Date;
       status: "PROCESSING" | "READY" | "FAILED";
+      stage: "SHORTLISTED" | "INTERVIEW" | "HIRED" | null;
+      hiredAt: Date | null;
       score: {
         meetsRequirements: boolean;
         matchPct: number;
@@ -102,6 +104,8 @@ export async function GET(
         hasShippedProject: candidateById.get(entry.applicationId)?.hasShippedProject ?? false,
         matchesFilters: entry.matchesFilters,
         status: deriveApplicationStatus(row.status, row.score?.meetsRequirements),
+        stage: row.stage ?? null,
+        hiredAt: row.hiredAt ?? null,
       };
     });
 

@@ -13,6 +13,9 @@ export type ApplicationContact = {
   status: ApplicationStatus;
   resumeUrl: string | null;
   portfolioUrl: string | null;
+  // Hiring pipeline: SHORTLISTED | INTERVIEW | HIRED, or null when the candidate isn't in the pipeline.
+  stage?: "SHORTLISTED" | "INTERVIEW" | "HIRED" | null;
+  hiredAt?: Date | string | null;
 };
 
 export function deriveFlags(score: ScoreResult): CandidateFlag[] {
@@ -56,6 +59,8 @@ export function buildCandidateDetail(
       phone: application.phone,
       createdAt: application.createdAt,
       status: deriveApplicationStatus(application.status, score.meetsRequirements),
+      stage: application.stage ?? null,
+      hiredAt: application.hiredAt ?? null,
       score: {
         overall: score.matchPct,
         reqMatch: score.reqMatch,

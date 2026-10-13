@@ -6,6 +6,7 @@ import { enqueueAnalysis } from "../../../../lib/jobs/queue";
 import { badRequest, notFound, errorResponse } from "../../../../lib/api/errors";
 import { checkRateLimitSafe, getClientIp } from "../../../../lib/security/rate-limit";
 import { verifyCaptchaToken } from "../../../../lib/security/captcha";
+import { isOwnUploadUrl } from "../../../../lib/api/urls";
 
 export async function GET(
   req: NextRequest,
@@ -65,6 +66,11 @@ export async function POST(
     const parsed = applySchema.safeParse(body);
     if (!parsed.success) {
       throw badRequest(parsed.error.issues[0]?.message ?? "Invalid application", { fields: zodIssuesToFields(parsed.error) });
+    }
+
+    if (!isOwnUploadUrl(parsed.data.resumeUrl, req.nextUrl.origin)) {
+      const message = "Upload your resume first.";
+      throw badRequest(message, { fields: { resumeUrl: message } });
     }
 
     const captchaOk = await verifyCaptchaToken(parsed.data.captchaToken ?? "", ip);

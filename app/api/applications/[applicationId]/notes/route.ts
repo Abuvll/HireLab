@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { prisma } from "../../../../../lib/db";
 import { requireApplicationAccess } from "../../../../../lib/api/application-access";
+import { createNoteSchema } from "../../../../../lib/api/validation";
+import { serializeNote } from "../../../../../lib/api/notes";
 import { badRequest, forbidden, errorResponse } from "../../../../../lib/api/errors";
 
-const createNoteSchema = z.object({ text: z.string().trim().min(1).max(5000) });
-
+/** GET /api/applications/:id/notes -> { notes } : the candidate's notes and replies, newest first. */
 export async function GET(
   req: NextRequest,
   { params }: { params: { applicationId: string } }
@@ -15,26 +15,19 @@ export async function GET(
 
     const notes = await prisma.candidateNote.findMany({
       where: { applicationId: params.applicationId },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
     });
 
-    return NextResponse.json({
-      notes: notes.map((n) => ({
-        id: n.id,
-        applicationId: n.applicationId,
-        authorId: n.authorId,
-        authorName: n.authorName,
-        authorRole: n.authorRole,
-        text: n.text,
-        createdAt: n.createdAt,
-        editedAt: n.editedAt,
-      })),
-    });
+    return NextResponse.json({ notes: notes.map((n) => serializeNote(n as never)) });
   } catch (err) {
     return errorResponse(err);
   }
 }
 
+/**
+ * POST /api/applications/:id/notes  { text, parentId? } -> 201, the new note.
+ * With `parentId` the note is a reply to that note, which must belong to the same candidate.
+ */
 export async function POST(
   req: NextRequest,
   { params }: { params: { applicationId: string } }
@@ -48,6 +41,19 @@ export async function POST(
     const parsed = createNoteSchema.safeParse(body);
     if (!parsed.success) throw badRequest(parsed.error.issues[0]?.message ?? "Invalid note");
 
+    const parentId = parsed.data.parentId ?? null;
+    if (parentId) {
+      const parent = await prisma.candidateNote.findUnique({
+        where: { id: parentId },
+        select: { id: true, applicationId: true },
+      });
+      // Same message for "doesn't exist" and "belongs to someone else's candidate": the caller learns nothing about notes
+      // outside this application.
+      if (!parent || parent.applicationId !== params.applicationId) {
+        throw badRequest("The note you're replying to no longer exists.");
+      }
+    }
+
     const author = await prisma.user.findUnique({ where: { id: session.userId } });
 
     const note = await prisma.candidateNote.create({
@@ -57,22 +63,11 @@ export async function POST(
         authorName: author?.name ?? "Unknown",
         authorRole: session.orgRole,
         text: parsed.data.text,
+        parentId,
       },
     });
 
-    return NextResponse.json(
-      {
-        id: note.id,
-        applicationId: note.applicationId,
-        authorId: note.authorId,
-        authorName: note.authorName,
-        authorRole: note.authorRole,
-        text: note.text,
-        createdAt: note.createdAt,
-        editedAt: note.editedAt,
-      },
-      { status: 201 }
-    );
+    return NextResponse.json(serializeNote(note as never), { status: 201 });
   } catch (err) {
     return errorResponse(err);
   }

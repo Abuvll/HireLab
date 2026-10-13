@@ -32,13 +32,11 @@ I built this to help small hiring teams screen candidates faster, with clear evi
 
 - **Candidate management:** Manage everything related to a candidate in one place: their profile, application details, notes, current status, and hiring history.
 
-- **Interview management:** Schedule candidate interviews and let interviewers record their feedback and observations after each interview.
+- **Interview management:** Schedule screening, technical, final-round and hiring-review interviews for a candidate, reschedule them, and mark them completed or canceled. Upcoming interviews show on the overview.
 
-- **Position management:** Create and manage job positions with requirements, deadlines, headcount, and a public application link candidates can use to apply.
+- **Hiring pipeline:** Move analysed candidates through Shortlisted → Interview → Hired (or back out of the pipeline). The hire date is recorded by the server.
 
-- **Hiring pipeline:** Move candidates through customizable stages such as Applied → Screening → Interview → Offer → Hired/Rejected, giving the team a clear view of where everyone stands.
-
-- **Team collaboration:** Manage hiring-team roles and assignments while allowing team members to share notes, feedback, and candidate evaluations.
+- **Candidate notes:** Threaded notes and replies on each candidate, pinning, and an organization-wide notes feed that shows what is new since you last looked.
 
 - **Background processing:** Run time-consuming tasks such as resume and GitHub analysis in the background so applications aren't blocked, with automatic retries when processing fails.
 
@@ -81,7 +79,7 @@ LITELLM_MASTER_KEY=          # must match the master key your LiteLLM Proxy inst
 GITHUB_TOKEN=                # a GitHub personal access token; required for the worker process to start
 ```
 
-`.env.example` documents several more optional variables, each with graceful behavior when left unset rather than a hard failure: `RESEND_API_KEY`/`EMAIL_FROM` (outbound email — invites/password resets still work without it, they just won't send a message), `TURNSTILE_SECRET_KEY` (CAPTCHA on the public application form), `CLAMAV_HOST`/`CLAMAV_PORT`/`UPLOAD_REQUIRE_VIRUS_SCAN` (resume upload virus scanning), `UPLOADS_DIR` (local file storage path), and `WORKER_INTERNAL_SECRET` (internal auth between the web and worker processes for serving uploaded files). Read the comment above each variable in `.env.example` before setting it.
+`.env.example` documents several more optional variables, each with graceful behavior when left unset rather than a hard failure: `RESEND_API_KEY`/`EMAIL_FROM` (outbound email — invites/password resets still work without it, they just won't send a message), `TURNSTILE_SECRET_KEY` (CAPTCHA on the public application form), `CLAMAV_HOST`/`CLAMAV_PORT`/`UPLOAD_REQUIRE_VIRUS_SCAN` (resume upload virus scanning), `STORAGE_DRIVER` / `UPLOADS_DIR` / `S3_*` (where uploaded resumes are stored — local disk or S3-compatible object storage), and `WORKER_INTERNAL_SECRET` (internal auth between the web and worker processes for serving uploaded files). Read the comment above each variable in `.env.example` before setting it.
 
 Postgres and Redis aren't included in `npm install` — `docker-compose.yml` in the project root starts Postgres, Redis, and a LiteLLM Proxy instance together for local development:
 
@@ -98,8 +96,10 @@ Running it locally needs three things at once: the backing services, the web ser
 ```bash
 docker compose up -d   # Postgres, Redis, LiteLLM Proxy
 npx prisma migrate deploy
+npm run build
 npm start               # the web app
 npm run worker          # in a separate terminal — without this, applications stay queued and never get scored
+                        # (an application saved while Redis was down is queued later with `npm run requeue`)
 ```
 
 ## Project Structure
@@ -111,9 +111,11 @@ hirelab/
 │   ├── apply/[positionId] # Redirects /apply/:id to /apply.html?position=:id
 │   └── page.tsx           # Redirects the bare domain to /index.html
 ├── public/
-│   ├── index.html          # Landing page + sign-up/login
+│   ├── index.html          # Landing page + sign-up/login dialog (uses /api/auth/*)
 │   ├── dashboard.html      # The authenticated app (single page, no build step)
-│   └── apply.html          # Public candidate application form
+│   ├── reset-password.html # Where the password-reset e-mail links to
+│   ├── accept-invite.html  # Where the team-invite e-mail links to
+│   └── apply.html          # Public candidate application form (uses /api/apply/*; PDF or DOCX resume)
 ├── lib/
 │   ├── api/               # Request validation, auth/session checks, response shaping shared across routes
 │   ├── auth/               # Password hashing, session cookies
@@ -126,8 +128,11 @@ hirelab/
 │   ├── security/             # Encryption, rate limiting, file-type checks, virus scanning, CAPTCHA
 │   ├── storage/               # File upload storage (local disk, or fetch-based for remote files)
 │   └── __tests__/             # Vitest unit tests, mirroring the structure above
-├── prisma/schema.prisma    # The full data model (organizations, users, positions, applications, scores, ...)
+├── prisma/schema.prisma    # The full data model (organizations, users, positions, applications, scores, interviews, ...)
+├── docs/API.md             # Every endpoint the dashboard uses, with roles and shapes
+├── CHANGELOG.md
 ├── scripts/start-worker.ts # Entry point for `npm run worker`
+├── scripts/requeue-processing.ts # `npm run requeue`: queue applications that were saved but never queued
 ├── docker-compose.yml      # Postgres, Redis, and LiteLLM Proxy for local development
 ├── .env.example
 ├── package.json
@@ -135,6 +140,19 @@ hirelab/
 ```
 
 `app/api` and `lib/jobs` are the two places that matter most if you're extending how an application gets processed: routes in `app/api` handle the request/response cycle, while `lib/jobs/analyze-application.ts` is the actual pipeline a queued application goes through.
+
+## Production
+
+Step-by-step deployment for any host (Docker Compose server, PaaS, container platform, plain Linux server): A ready-made single-server stack is in `deploy/`. In short, what a production deployment needs, on any host:
+
+- **Two processes** from the same code: the web app (`npm start`, or the `runner` Docker target) and the background worker (`npm run worker`, or the `worker` target). The worker needs `tsx`, which is a dev dependency — don't prune dev dependencies on the host that runs it.
+- **PostgreSQL and Redis.** Apply the database schema with `npm run db:deploy` (`prisma migrate deploy`) before starting a new version. With Docker: `docker build --target migrate -t hirelab-migrate .` then run that image with `DATABASE_URL` set. For TLS-only providers use `?sslmode=require` in `DATABASE_URL` and `rediss://` in `REDIS_URL`.
+- **Environment variables** — see `.env.example` (each one is documented there). In production `SESSION_SECRET` must be at least 32 characters, `NEXT_PUBLIC_APP_URL` must be the real public `https://` address, and `WORKER_INTERNAL_SECRET` is needed for the worker to download resumes. Leave `TURNSTILE_SECRET_KEY` empty unless the apply form renders a CAPTCHA widget, and leave `UPLOAD_REQUIRE_VIRUS_SCAN` at `false` unless ClamAV is running.
+- **Health checks.** `GET /api/health` is a liveness probe (no dependencies touched); `GET /api/health/ready` checks PostgreSQL and Redis and returns 503 if either is down.
+- **Uploaded resumes.** `STORAGE_DRIVER=local` (default) keeps them on disk in `UPLOADS_DIR` (`/data/uploads` in the Docker image) — only safe on a persistent disk or volume. On any host with an ephemeral filesystem, or when you run several web instances, set `STORAGE_DRIVER=s3` and the `S3_*` variables to use any S3-compatible object store (AWS S3, Cloudflare R2, Backblaze B2, MinIO, DigitalOcean Spaces, ...). Check the setup with `npm run storage:check`. To try it locally: `docker compose --profile s3 up -d minio minio-init`, then use the MinIO values listed in `docker-compose.yml`.
+- **Docker.** `docker build .` builds the web server (the default, last target). The image listens on `PORT` (3000) on all interfaces and runs as a non-root user.
+- **Schema changes** need a migration (`npm run db:migrate -- --name <change>`); a test fails if `prisma/schema.prisma` and `prisma/migrations` drift apart. For an exact comparison against a scratch database, run `SHADOW_DATABASE_URL=<empty scratch postgres> npm run db:check-migrations`.
+- **One command to verify a checkout** (needs the Postgres from `docker compose up -d postgres redis` and a `.env`): `npm run verify` — generates the Prisma client, type-checks, runs the tests and builds.
 
 ## Development
 

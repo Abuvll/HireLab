@@ -1,7 +1,16 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { ORG_ROLES, POSITION_STATUSES, APPLICATION_STATUSES, CONTACT_METHODS, EMPLOYMENT_TYPES } from "../domain-enums";
+import {
+  ORG_ROLES,
+  POSITION_STATUSES,
+  APPLICATION_STATUSES,
+  CONTACT_METHODS,
+  EMPLOYMENT_TYPES,
+  APPLICATION_STAGES,
+  INTERVIEW_TYPES,
+  INTERVIEW_STATUSES,
+} from "../domain-enums";
 
 function getModelFieldNames(schemaText: string, modelName: string): string[] {
   const modelMatch = schemaText.match(new RegExp(`model ${modelName} \\{([\\s\\S]*?)\\n\\}`));
@@ -100,5 +109,32 @@ describe("domain-enums.ts / schema.prisma enum consistency", () => {
   });
   it("EmploymentType matches EMPLOYMENT_TYPES", () => {
     expect(getEnumValues(schemaText, "EmploymentType").sort()).toEqual([...EMPLOYMENT_TYPES].sort());
+  });
+  it("ApplicationStage matches APPLICATION_STAGES", () => {
+    expect(getEnumValues(schemaText, "ApplicationStage").sort()).toEqual([...APPLICATION_STAGES].sort());
+  });
+  it("InterviewType matches INTERVIEW_TYPES", () => {
+    expect(getEnumValues(schemaText, "InterviewType").sort()).toEqual([...INTERVIEW_TYPES].sort());
+  });
+  it("InterviewStatus matches INTERVIEW_STATUSES", () => {
+    expect(getEnumValues(schemaText, "InterviewStatus").sort()).toEqual([...INTERVIEW_STATUSES].sort());
+  });
+});
+
+describe("dashboard columns exist in schema.prisma", () => {
+  it("Application carries the hiring stage, the hire date and its interviews", () => {
+    const f = getModelFieldNames(schemaText, "Application");
+    for (const name of ["stage", "hiredAt", "interviews"]) expect(f, `Application.${name}`).toContain(name);
+  });
+  it("CandidateNote carries reply (parentId / replies) and pin state", () => {
+    const f = getModelFieldNames(schemaText, "CandidateNote");
+    for (const name of ["parent", "parentId", "replies", "pinned"]) expect(f, `CandidateNote.${name}`).toContain(name);
+  });
+  it("Interview has everything the Interviews view reads", () => {
+    const f = getModelFieldNames(schemaText, "Interview");
+    for (const name of ["id", "applicationId", "type", "startTime", "endTime", "interviewerName", "status"]) expect(f, `Interview.${name}`).toContain(name);
+  });
+  it("User remembers when the person last opened the Notes feed", () => {
+    expect(getModelFieldNames(schemaText, "User")).toContain("notesLastViewedAt");
   });
 });

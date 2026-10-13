@@ -2,17 +2,27 @@
   "name": "hirelab",
   "private": true,
   "version": "0.7.0",
- "scripts": {
+  "engines": {
+    "node": ">=20.9.0 <23"
+  },
+  "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "typecheck": "tsc --noEmit",
     "worker": "tsx scripts/start-worker.ts",
+    "storage:check": "tsx scripts/check-storage.ts",
+    "requeue": "tsx scripts/requeue-processing.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:status": "prisma migrate status",
+    "db:check-migrations": "node scripts/check-migrations.cjs",
     "db:studio": "prisma studio",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "verify": "npm run db:generate && npm run typecheck && npm test && npm run build"
   },
   "dependencies": {
     "@prisma/client": "^5.20.0",
@@ -29,7 +39,7 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
-    "@types/node": "^20.14.0",
+    "@types/node": "^20.19.43",
     "@types/pdf-parse": "^1.1.5",
     "@types/react": "^18.3.0",
     "docx": "^9.7.1",
@@ -40,6 +50,3 @@
     "vitest": "^2.1.0"
   }
 }
-
-
-

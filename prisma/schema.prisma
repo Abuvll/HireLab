@@ -43,6 +43,8 @@ model User {
   organization        Organization         @relation(fields: [organizationId], references: [id])
   organizationId      String
   createdAt           DateTime             @default(now())
+  // When this person last opened the Notes feed. The dashboard marks threads with newer activity as "new".
+  notesLastViewedAt   DateTime?
   positionTeams       PositionTeam[]
   notificationPrefs   NotificationPrefs?
   notificationReads   NotificationRead[]
@@ -147,6 +149,26 @@ enum EmploymentType {
   HYBRID
 }
 
+// Where a candidate is in the hiring pipeline. null = nobody has moved them into a stage yet (the default).
+enum ApplicationStage {
+  SHORTLISTED
+  INTERVIEW
+  HIRED
+}
+
+enum InterviewType {
+  SCREENING
+  TECHNICAL
+  FINAL_ROUND
+  HIRING_REVIEW
+}
+
+enum InterviewStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELED
+}
+
 // The upstream provider an org's BYOK key belongs to — see LLM_PROVIDERS in lib/domain-enums.ts for why Meta
 // isn't here yet. One key routes to exactly one provider; this is what makes it real BYOK rather than a broker
 // model like the OpenRouter integration this replaces.
@@ -179,10 +201,16 @@ model Application {
   createdAt     DateTime          @default(now())
   analyzedAt    DateTime?
 
+  // Hiring pipeline (Hiring > Pipeline, the candidate page's stage menu). `stage` is null until a recruiter sets one.
+  // `hiredAt` is stamped by the server at the moment the stage becomes HIRED and cleared when it moves away again.
+  stage   ApplicationStage?
+  hiredAt DateTime?
+
   resumeExtract  ResumeExtract?
   githubAnalysis GithubAnalysis?
   score          Score?
   notes          CandidateNote[]
+  interviews     Interview[]
 
   notificationReads NotificationRead[]
 
@@ -286,7 +314,36 @@ model CandidateNote {
   createdAt     DateTime    @default(now())
   editedAt      DateTime?
 
+  // A reply points at the note it answers (always one on the same application). Deleting a note deletes its replies.
+  parent        CandidateNote?  @relation("NoteReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  parentId      String?
+  replies       CandidateNote[] @relation("NoteReplies")
+  // Pinned notes are listed first in the Notes feed. Any member who can write notes may pin or unpin.
+  pinned        Boolean     @default(false)
+
   @@index([applicationId])
+  @@index([parentId])
+}
+
+// ---------- interviews (Hiring > Interviews) ----------
+
+model Interview {
+  id              String          @id @default(cuid())
+  application     Application     @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  applicationId   String
+  type            InterviewType
+  startTime       DateTime
+  endTime         DateTime
+  // Free text: the interviewer is not required to have an account. "" = not specified.
+  interviewerName String          @default("")
+  status          InterviewStatus @default(SCHEDULED)
+  // Who scheduled it. Plain id (no relation), like PendingInvite.invitedByUserId: it must survive that person leaving.
+  createdByUserId String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([applicationId])
+  @@index([startTime])
 }
 
 // ---------- org-level settings (§3.27–3.32) ----------

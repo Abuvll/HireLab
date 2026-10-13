@@ -5,6 +5,7 @@ import { PrismaAnalysisRepository } from "../db-adapters/prisma-repository";
 import { FetchFileStorage } from "../storage/fetch-storage";
 import { GithubApiFetcher } from "../github/fetcher-adapter";
 import { LiteLLMClient } from "../extraction/litellm-client";
+import { createRedisConnection } from "../security/redis-connection";
 
 
 function requireEnv(name: string): string {
@@ -24,7 +25,7 @@ function buildDeps() {
 }
 
 export function startWorker(): Worker<AnalyzeApplicationJobData> {
-  const redisUrl = requireEnv("REDIS_URL");
+  requireEnv("REDIS_URL");
   const deps = buildDeps();
 
   const worker = new Worker<AnalyzeApplicationJobData>(
@@ -34,7 +35,7 @@ export function startWorker(): Worker<AnalyzeApplicationJobData> {
       await analyzeApplication(job.data.applicationId, deps, { isFinalAttempt });
     },
     {
-      connection: { url: redisUrl },
+      connection: createRedisConnection({ maxRetriesPerRequest: null }),
       concurrency: 5,
       stalledInterval: 30_000,
       maxStalledCount: 1,
@@ -47,6 +48,12 @@ export function startWorker(): Worker<AnalyzeApplicationJobData> {
 
   worker.on("completed", (job) => {
     console.log(`Application analysis completed: ${job.data.applicationId}`);
+  });
+
+  // Connection-level errors (e.g. Redis restarting or waking up): log them and let BullMQ reconnect,
+  // instead of crashing the process on an unhandled "error" event.
+  worker.on("error", (err: Error) => {
+    console.error("[worker] error:", err);
   });
 
   return worker;
