@@ -7,10 +7,6 @@ import {
 } from "./local-storage";
 import { signS3Request } from "./s3-signer";
 
-// Resume storage on any S3-compatible object store (AWS S3, Cloudflare R2, Backblaze B2, MinIO, DigitalOcean
-// Spaces, Supabase Storage, Wasabi, Tigris, ...). Selected with STORAGE_DRIVER=s3 — see lib/storage/index.ts.
-// Uses plain fetch + AWS Signature V4 (lib/storage/s3-signer.ts), so there is no extra dependency.
-
 const REQUEST_TIMEOUT_MS = 30_000;
 
 export type S3Config = {

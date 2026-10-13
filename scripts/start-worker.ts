@@ -4,8 +4,6 @@ import { ANALYSIS_QUEUE_NAME } from "../lib/jobs/queue";
 const worker = startWorker();
 console.log(`Worker listening on queue "${ANALYSIS_QUEUE_NAME}"`);
 
-// Container platforms stop a service with SIGTERM on every deploy/restart. Closing the worker lets in-flight jobs
-// finish (instead of being marked stalled and retried) before the process exits.
 let shuttingDown = false;
 async function shutdown(signal: string): Promise<void> {
   if (shuttingDown) return;

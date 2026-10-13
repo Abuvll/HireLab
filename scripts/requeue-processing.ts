@@ -1,9 +1,4 @@
-// Re-queues applications that were saved but never queued for analysis (e.g. Redis was unreachable at the moment they applied).
-//   npm run requeue                          # applications PROCESSING for more than 15 minutes
-//   npm run requeue -- --older-than=60       # ...more than 60 minutes
-//   npm run requeue -- --dry-run             # only list how many there are
-// Run it where the web app / worker runs (it needs DATABASE_URL and REDIS_URL). Safe to run repeatedly: each application has a
-// fixed job id, so one that already has a job is not queued twice.
+
 import { prisma } from "../lib/db";
 import { enqueueAnalysis } from "../lib/jobs/queue";
 import { requeueProcessing } from "../lib/jobs/requeue";

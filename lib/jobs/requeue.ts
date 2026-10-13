@@ -1,12 +1,4 @@
-/**
- * Re-queues applications that were stored but never got an analysis job.
- *
- * POST /api/apply/:id commits the application (status PROCESSING) before it enqueues the analysis job, and deliberately still
- * answers 201 if the queue is unreachable at that instant (a Redis blip must not throw away a candidate's submission). Such an
- * application would stay PROCESSING forever. This finds the ones that have been PROCESSING longer than `olderThanMinutes` and
- * enqueues them again. The job id is derived from the application id (see analysisJobId), so applications that already have a
- * job are not duplicated. Run it with `npm run requeue` (see docs/DEPLOYMENT-GUIDE.md).
- */
+
 export type StuckApplication = { id: string };
 
 export interface RequeueDeps {

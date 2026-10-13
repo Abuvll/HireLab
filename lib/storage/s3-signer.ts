@@ -1,14 +1,8 @@
 import { createHash, createHmac } from "node:crypto";
 
-// AWS Signature Version 4 for S3-compatible object storage, implemented with node:crypto only (no SDK).
-// Covers what HireLab needs: PUT / GET / DELETE of a single object, no query string.
-// Verified against the example signatures in AWS's "Signature Calculations for the Authorization Header" docs
-// (see lib/__tests__/s3-signer.test.ts).
-
 export type SignS3RequestParams = {
   method: string;
   url: URL;
-  /** Extra headers to send AND sign (e.g. content-type). `host`, `x-amz-date` and `x-amz-content-sha256` are added for you. */
   headers?: Record<string, string>;
   /** The request body; use an empty string/buffer for GET and DELETE. */
   payload: Uint8Array | string;
@@ -20,7 +14,6 @@ export type SignS3RequestParams = {
 };
 
 export type SignedS3Request = {
-  /** Headers to send. `host` is deliberately not included: the HTTP client derives it from the URL. */
   headers: Record<string, string>;
   /** The URL to request: the path is percent-encoded exactly the way it was signed. */
   url: string;

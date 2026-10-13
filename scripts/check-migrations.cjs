@@ -1,11 +1,4 @@
-// Verifies that prisma/migrations produces exactly the database described by prisma/schema.prisma.
-// Run it after editing the schema or the migrations; it exits 0 only when there is no difference.
-//
-//   SHADOW_DATABASE_URL must point to an EMPTY scratch PostgreSQL database (Prisma applies the migrations to it
-//   and compares the result with schema.prisma). Example for the docker-compose database:
-//     docker compose up -d postgres
-//     docker compose exec postgres createdb -U hirelab hirelab_shadow
-//     SHADOW_DATABASE_URL=postgresql://hirelab:hirelab@localhost:5432/hirelab_shadow npm run db:check-migrations
+
 const { spawnSync } = require("node:child_process");
 
 const shadow = process.env.SHADOW_DATABASE_URL;

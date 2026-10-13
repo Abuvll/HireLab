@@ -1,12 +1,6 @@
 import { saveLocalFile, readLocalFile, deleteLocalFile } from "./local-storage";
 import { saveS3File, readS3File, deleteS3File } from "./s3-storage";
 
-// One entry point for uploaded resumes. The backend is chosen with STORAGE_DRIVER:
-//   local (default)  files on this machine's disk, in UPLOADS_DIR (default ./uploads) — needs a persistent disk
-//   s3               any S3-compatible object store — works on hosts whose filesystem is ephemeral
-// Callers get back the same "<uuid>.<ext>" name either way, so upload URLs and the worker's download flow
-// (see lib/storage/fetch-storage.ts) are identical for both drivers.
-
 export { InvalidUploadError, FileNotFoundError, mimeTypeForExtension } from "./local-storage";
 
 export type StorageDriver = "local" | "s3";

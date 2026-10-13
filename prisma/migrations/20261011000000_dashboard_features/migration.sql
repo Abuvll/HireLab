@@ -1,5 +1,3 @@
--- Hiring pipeline stage, interviews, and note replies / pins and the Notes feed's last-viewed time (the features dashboard.html needs beyond the first release).
--- Additive only: every new column is nullable or has a default, so existing rows stay valid and no backfill is needed.
 
 -- CreateEnum
 CREATE TYPE "ApplicationStage" AS ENUM ('SHORTLISTED', 'INTERVIEW', 'HIRED');
